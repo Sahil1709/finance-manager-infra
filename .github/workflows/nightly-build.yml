@@ -53,7 +53,8 @@ jobs:
 
       - name: Log in to AWS ECR
         run: |
-          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
+          aws ecr get-login-password --region us-east-1 | \
+          docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
 
       # 5. Build and push the Frontend image
       - name: Build & Push Frontend Image
@@ -62,7 +63,10 @@ jobs:
           IMAGE_NAME="${{ secrets.ECR_REGISTRY }}/finance-manager-frontend"
           IMAGE_TAG=$(date +'%Y%m%d%H%M%S')
           echo "Building frontend image: $IMAGE_NAME:latest and $IMAGE_NAME:$IMAGE_TAG"
-          docker build -t $IMAGE_NAME:latest -t $IMAGE_NAME:$IMAGE_TAG ./frontend
+          docker build --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }} \
+                       --build-arg CLERK_SECRET_KEY=${{ secrets.CLERK_SECRET_KEY }} \
+                       --build-arg NEXT_PUBLIC_BACKEND_URL=${{ secrets.NEXT_PUBLIC_BACKEND_URL }} \
+                       -t $IMAGE_NAME:latest -t $IMAGE_NAME:$IMAGE_TAG ./frontend
           docker push $IMAGE_NAME:latest
           docker push $IMAGE_NAME:$IMAGE_TAG
           echo "::set-output name=frontend_tag::$IMAGE_TAG"
@@ -74,7 +78,9 @@ jobs:
           IMAGE_NAME="${{ secrets.ECR_REGISTRY }}/finance-manager-backend"
           IMAGE_TAG=$(date +'%Y%m%d%H%M%S')
           echo "Building backend image: $IMAGE_NAME:latest and $IMAGE_NAME:$IMAGE_TAG"
-          docker build -t $IMAGE_NAME:latest -t $IMAGE_NAME:$IMAGE_TAG ./backend
+          docker build --build-arg DATABASE_URL=${{ secrets.DATABASE_URL }} \
+                       --build-arg FRONTEND_URL=${{ secrets.FRONTEND_URL }} \
+                       -t $IMAGE_NAME:latest -t $IMAGE_NAME:$IMAGE_TAG ./backend
           docker push $IMAGE_NAME:latest
           docker push $IMAGE_NAME:$IMAGE_TAG
           echo "::set-output name=backend_tag::$IMAGE_TAG"

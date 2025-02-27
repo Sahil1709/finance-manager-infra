@@ -1,0 +1,75 @@
+name: Nightly Build & Push to ECR
+
+on:
+  schedule:
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout the source repository that contains your Dockerfiles
+      - name: Checkout Source Repository
+        uses: actions/checkout@v4
+        with:
+          repository: Sahil1709/finance-manager
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      # 2. Set up Python and run tests
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Dependencies
+        run: |
+          cd backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Tests
+        run: pytest
+
+      # 3. Set up Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 4. Log in to AWS ECR
+      - name: Login to AWS ECR
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ secrets.ECR_REGISTRY }}
+          username: AWS
+          password: ${{ secrets.AWS_ECR_PASSWORD }}
+
+      # 5. Build and push the Frontend image
+      - name: Build & Push Frontend Image
+        id: build_frontend
+        run: |
+          IMAGE_NAME="${{ secrets.ECR_REGISTRY }}/finance-manager-frontend"
+          IMAGE_TAG=$(date +'%Y%m%d%H%M%S')
+          echo "Building frontend image: $IMAGE_NAME:latest and $IMAGE_NAME:$IMAGE_TAG"
+          docker build -t $IMAGE_NAME:latest -t $IMAGE_NAME:$IMAGE_TAG ./frontend
+          docker push $IMAGE_NAME:latest
+          docker push $IMAGE_NAME:$IMAGE_TAG
+          echo "::set-output name=frontend_tag::$IMAGE_TAG"
+
+      # 6. Build and push the Backend image
+      - name: Build & Push Backend Image
+        id: build_backend
+        run: |
+          IMAGE_NAME="${{ secrets.ECR_REGISTRY }}/finance-manager-backend"
+          IMAGE_TAG=$(date +'%Y%m%d%H%M%S')
+          echo "Building backend image: $IMAGE_NAME:latest and $IMAGE_NAME:$IMAGE_TAG"
+          docker build -t $IMAGE_NAME:latest -t $IMAGE_NAME:$IMAGE_TAG ./backend
+          docker push $IMAGE_NAME:latest
+          docker push $IMAGE_NAME:$IMAGE_TAG
+          echo "::set-output name=backend_tag::$IMAGE_TAG"

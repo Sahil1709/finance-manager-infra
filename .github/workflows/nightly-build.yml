@@ -60,7 +60,7 @@ jobs:
       - name: Build & Push Frontend Image
         id: build_frontend
         run: |
-          IMAGE_NAME="${{ secrets.ECR_REGISTRY }}/finance-manager-frontend"
+          IMAGE_NAME="${{ secrets.ECR_REGISTRY }}/sahil1709/finance-manager-frontend"
           IMAGE_TAG=$(date +'%Y%m%d%H%M%S')
           echo "Building frontend image: $IMAGE_NAME:latest and $IMAGE_NAME:$IMAGE_TAG"
           docker build --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }} \
@@ -75,7 +75,7 @@ jobs:
       - name: Build & Push Backend Image
         id: build_backend
         run: |
-          IMAGE_NAME="${{ secrets.ECR_REGISTRY }}/finance-manager-backend"
+          IMAGE_NAME="${{ secrets.ECR_REGISTRY }}/sahil1709/finance-manager-backend"
           IMAGE_TAG=$(date +'%Y%m%d%H%M%S')
           echo "Building backend image: $IMAGE_NAME:latest and $IMAGE_NAME:$IMAGE_TAG"
           docker build --build-arg DATABASE_URL=${{ secrets.DATABASE_URL }} \

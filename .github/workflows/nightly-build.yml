@@ -1,4 +1,4 @@
-name: Nightly Build & Push to ECR
+name: Integration testing, Nightly Build & Push to ECR
 
 on:
   schedule:
@@ -10,9 +10,97 @@ permissions:
   packages: write
 
 jobs:
-  build-and-push:
+  integration-test:
     runs-on: ubuntu-latest
+    outputs:
+      test-passed: ${{ steps.verify-test.outputs.result }}
+    steps:
+      - name: Checkout Source Repository
+        uses: actions/checkout@v4
+        with:
+          repository: Sahil1709/finance-manager
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: us-east-1
+
+      # Launch a temporary EC2 instance.
+      - name: Launch Temporary EC2 Instance
+        id: launch_ec2
+        run: |
+          LAUNCH_OUTPUT=$(aws ec2 run-instances \
+            --image-id ami-079968ac4709f75f6 \
+            --count 1 \
+            --instance-type t3.medium \
+            --key-name aws-academy-key \
+            --security-group-ids sg-0a675cf6604c9961a \
+            --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=IntegrationTestInstance}]')
+          
+          INSTANCE_ID=$(echo "$LAUNCH_OUTPUT" | jq -r '.Instances[0].InstanceId')
+          echo "Instance ID: $INSTANCE_ID"
+          echo "::set-output name=instance_id::$INSTANCE_ID"
+          
+          # Wait for instance to be running
+          aws ec2 wait instance-running --instance-ids $INSTANCE_ID
+          
+          # Get the public IP of the instance
+          PUBLIC_IP=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID | jq -r '.Reservations[0].Instances[0].PublicIpAddress')
+          echo "Instance Public IP: $PUBLIC_IP"
+          echo "::set-output name=public_ip::$PUBLIC_IP"
+        shell: bash
+
+      # Run integration tests on the temporary EC2 instance
+      - name: Run Integration Test on EC2
+        id: integration_test
+        run: |
+            PUBLIC_IP=${{ steps.launch_ec2.outputs.public_ip }}
+            echo "Running integration test on instance $PUBLIC_IP"
+            
+            # Save SSH key from secret into a file
+            echo "${{ secrets.EC2_SSH_KEY }}" > ec2_key.pem
+            chmod 600 ec2_key.pem
+            
+            # SSH into the instance and run commands:
+            ssh -o StrictHostKeyChecking=no -i ec2_key.pem ec2-user@$PUBLIC_IP << 'EOF'
+                  cd finance-manager
+                  docker system prune -af
+                  docker-compose up -d
+                  sleep 30
+                  FRONTEND_RESULT=$(curl http://localhost:3000/)
+                  echo "$FRONTEND_RESULT" > /tmp/smoke_test_frontend.txt
+                  BACKEND_RESULT=$(curl http://localhost:8000/health)
+                  echo "$BACKEND_RESULT" > /tmp/smoke_test_backend.txt
+                  EOF
+            # Retrieve the test result from the instance
+            scp -i ec2_key.pem ec2-user@$PUBLIC_IP:/tmp/smoke_test_frontend.txt /tmp/smoke_test_frontend.txt
+            scp -i ec2_key.pem ec2-user@$PUBLIC_IP:/tmp/smoke_test_backend.txt /tmp/smoke_test_backend.txt
+            
+            if grep -q "Finance Manager" /tmp/smoke_test_frontend.txt && grep -q "\"status\": \"healthy\"" /tmp/smoke_test_backend.txt; then
+              echo "Integration test passed."
+              echo "::set-output name=result::success"
+            else
+              echo "Integration test failed." >&2
+              echo "::set-output name=result::failure"
+              exit 1
+            fi
+        shell: bash
+
+      - name: Terminate EC2 Instance
+        if: always()
+        run: |
+          aws ec2 terminate-instances \
+            --instance-ids ${{ steps.launch_ec2.outputs.instance_id }}
+
+  build-and-push:
+    needs: integration-test
+    if: needs.integration-test.outputs.test-passed == 'success'
+    runs-on: ubuntu-latest
     steps:
       # 1. Checkout the source repository that contains your Dockerfiles
       - name: Checkout Source Repository

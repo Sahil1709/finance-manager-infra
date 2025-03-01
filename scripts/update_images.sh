@@ -16,6 +16,12 @@ echo "Stopping existing containers..."
 docker rm -f frontend || true
 docker rm -f backend || true
 
+# Remove older images
+echo "Removing older frontend images..."
+docker images ${ECR_REGISTRY}/${FRONTEND_IMAGE} --format "{{.ID}}" | tail -n +2 | xargs -r docker rmi
+echo "Removing older backend images..."
+docker images ${ECR_REGISTRY}/${BACKEND_IMAGE} --format "{{.ID}}" | tail -n +2 | xargs -r docker rmi
+
 # Run containers using the updated images.
 echo "Starting new containers..."
 docker run -d --name frontend -p 3000:3000 ${ECR_REGISTRY}/${FRONTEND_IMAGE}:latest

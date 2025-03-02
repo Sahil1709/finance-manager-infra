@@ -132,12 +132,18 @@ jobs:
         run: ${{ github.workspace }}/infra/scripts/launch_ec2.sh
         shell: bash
 
+      - name: Save EC2 Key Pair
+        run: |
+          echo ${{secrets.EC2_SSH_KEY}} > ${{ github.workspace }}/infra/scripts/ec2-key.pem
+          chmod 600 ${{ github.workspace }}/infra/scripts/ec2-key.pem
+        shell: bash
+
       # Run integration test on the EC2 instance
       - name: Run Integration Test on EC2
         id: integration_test
         run: |
-            scp -o StrictHostKeyChecking=no -i ${{ secrets.EC2_SSH_KEY }} ${{ github.workspace }}/infra/scripts/run_integration_test.sh ec2-user@${{ steps.launch_ec2.outputs.public_ip }}:/home/ec2-user/
-            ssh -t -o StrictHostKeyChecking=no -i ${{ secrets.EC2_SSH_KEY }} ec2-user@${{ steps.launch_ec2.outputs.public_ip }} << 'EOF'
+            scp -o StrictHostKeyChecking=no -i ${{ github.workspace }}/infra/scripts/ec2-key.pem ${{ github.workspace }}/infra/scripts/run_integration_test.sh ec2-user@${{ steps.launch_ec2.outputs.public_ip }}:/home/ec2-user/
+            ssh -t -o StrictHostKeyChecking=no -i ${{ github.workspace }}/infra/scripts/ec2-key.pem ec2-user@${{ steps.launch_ec2.outputs.public_ip }} << 'EOF'
             export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
             export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
             export AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN}

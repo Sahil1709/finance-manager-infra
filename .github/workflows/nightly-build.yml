@@ -67,7 +67,7 @@ jobs:
             chmod 600 ec2_key.pem
             
             # SSH into the instance and run commands:
-            ssh -o StrictHostKeyChecking=no -i ec2_key.pem ec2-user@$PUBLIC_IP << 'EOF'
+            ssh -t -o StrictHostKeyChecking=no -i ec2_key.pem ec2-user@$PUBLIC_IP << 'EOF'
                   cd finance-manager
                   git pull
                   docker system prune -af
@@ -77,7 +77,7 @@ jobs:
                   echo "$FRONTEND_RESULT" > /tmp/smoke_test_frontend.txt
                   BACKEND_RESULT=$(curl http://localhost:8000/health)
                   echo "$BACKEND_RESULT" > /tmp/smoke_test_backend.txt
-                  EOF
+            EOF
             # Retrieve the test result from the instance
             scp -i ec2_key.pem ec2-user@$PUBLIC_IP:/tmp/smoke_test_frontend.txt /tmp/smoke_test_frontend.txt
             scp -i ec2_key.pem ec2-user@$PUBLIC_IP:/tmp/smoke_test_backend.txt /tmp/smoke_test_backend.txt

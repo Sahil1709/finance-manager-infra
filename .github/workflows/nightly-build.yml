@@ -169,19 +169,19 @@ jobs:
                 -o UserKnownHostsFile=/dev/null \
                 -i "${{ github.workspace }}/infra/scripts/ec2-key.pem" \
                 ec2-user@${{ steps.launch_ec2.outputs.public_ip }} <<EOF
-export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-export AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN}
-export AWS_REGION=${AWS_REGION}
-export ECR_REGISTRY=${ECR_REGISTRY}
-export NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
-export CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
-export NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL}
-export DATABASE_URL=${DATABASE_URL}
-export FRONTEND_URL=${FRONTEND_URL}
-chmod +x /home/ec2-user/run_integration_test.sh
-/home/ec2-user/run_integration_test.sh
-EOF
+            export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+            export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+            export AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN}
+            export AWS_REGION=${AWS_REGION}
+            export ECR_REGISTRY=${ECR_REGISTRY}
+            export NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+            export CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
+            export NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL}
+            export DATABASE_URL=${DATABASE_URL}
+            export FRONTEND_URL=${FRONTEND_URL}
+            chmod +x /home/ec2-user/run_integration_test.sh
+            /home/ec2-user/run_integration_test.sh
+            EOF
         shell: bash
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}

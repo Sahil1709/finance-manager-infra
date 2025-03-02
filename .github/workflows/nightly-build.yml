@@ -145,14 +145,15 @@ jobs:
       - name: Run Integration Test on EC2
         id: integration_test
         run: |
-            scp -o "StrictHostKeyChecking=no" \
-                -o "UserKnownHostsFile=/dev/null" \
+            scp -o StrictHostKeyChecking=no \
+                -o UserKnownHostsFile=/dev/null \
+                -o LogLevel=ERROR \
                 -i "${{ github.workspace }}/infra/scripts/ec2-key.pem" \
                 "${{ github.workspace }}/infra/scripts/run_integration_test.sh" \
                 ec2-user@${{ steps.launch_ec2.outputs.public_ip }}:/home/ec2-user/
 
-            ssh -t -o "StrictHostKeyChecking=no" \
-                -o "UserKnownHostsFile=/dev/null" \
+            ssh -t -o "StrictHostKeyChecking=no \
+                -o UserKnownHostsFile=/dev/null \
                 -i ${{ github.workspace }}/infra/scripts/ec2-key.pem ec2-user@${{ steps.launch_ec2.outputs.public_ip }} << 'EOF'
                 export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
                 export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}

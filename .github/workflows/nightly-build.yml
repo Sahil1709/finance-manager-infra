@@ -81,7 +81,7 @@ jobs:
       - name: Build & Push Frontend Image
         id: build_frontend
         run: |
-          cd src/frontend
+          cd src
           IMAGE_NAME="${{ secrets.ECR_REGISTRY }}/sahil1709/finance-manager-frontend"
           IMAGE_TAG=$(date +'%Y%m%d%H%M%S')
           echo "Building frontend image: $IMAGE_NAME:latest and $IMAGE_NAME:$IMAGE_TAG"
@@ -98,7 +98,7 @@ jobs:
       - name: Build & Push Backend Image
         id: build_backend
         run: |
-          cd src/backend
+          cd src
           IMAGE_NAME="${{ secrets.ECR_REGISTRY }}/sahil1709/finance-manager-backend"
           IMAGE_TAG=$(date +'%Y%m%d%H%M%S')
           echo "Building backend image: $IMAGE_NAME:latest and $IMAGE_NAME:$IMAGE_TAG"

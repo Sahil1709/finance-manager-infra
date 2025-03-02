@@ -23,6 +23,8 @@ jobs:
       FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
     outputs:
       test-passed: ${{ steps.integration_test.outputs.result }}
+      frontend_repo_name: ${{ steps.build_frontend.outputs.frontend_repo_name }}
+      backend_repo_name: ${{ steps.build_backend.outputs.backend_repo_name }}
       frontend_tag: ${{ steps.build_frontend.outputs.frontend_tag }}
       backend_tag: ${{ steps.build_backend.outputs.backend_tag }}
     steps:
@@ -66,29 +68,31 @@ jobs:
       - name: Build & Push Frontend Image
         id: build_frontend
         run: |
-          IMAGE_FRONTEND="${{ secrets.ECR_REGISTRY }}/finance-manager-frontend"
+          IMAGE_NAME="${{ secrets.ECR_REGISTRY }}/sahil1709/finance-manager-frontend"
           IMAGE_TAG=$(date +'%Y%m%d%H%M%S')
-          echo "Building frontend image: $IMAGE_FRONTEND:latest and $IMAGE_FRONTEND:$IMAGE_TAG"
+          echo "Building frontend image: $IMAGE_NAME:latest and $IMAGE_NAME:$IMAGE_TAG"
           docker build --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }} \
                        --build-arg CLERK_SECRET_KEY=${{ secrets.CLERK_SECRET_KEY }} \
                        --build-arg NEXT_PUBLIC_BACKEND_URL=${{ secrets.NEXT_PUBLIC_BACKEND_URL }} \
-                       -t $IMAGE_FRONTEND:latest -t $IMAGE_FRONTEND:$IMAGE_TAG ./frontend
-          docker push $IMAGE_FRONTEND:latest
-          docker push $IMAGE_FRONTEND:$IMAGE_TAG
+                       -t $IMAGE_NAME:latest -t $IMAGE_NAME:$IMAGE_TAG ./frontend
+          docker push $IMAGE_NAME:latest
+          docker push $IMAGE_NAME:$IMAGE_TAG
+          echo "::set-output name=frontend_repo_name::$IMAGE_NAME"
           echo "::set-output name=frontend_tag::$IMAGE_TAG"
         shell: bash
 
       - name: Build & Push Backend Image
         id: build_backend
         run: |
-          IMAGE_BACKEND="${{ secrets.ECR_REGISTRY }}/finance-manager-backend"
+          IMAGE_NAME="${{ secrets.ECR_REGISTRY }}/sahil1709/finance-manager-backend"
           IMAGE_TAG=$(date +'%Y%m%d%H%M%S')
-          echo "Building backend image: $IMAGE_BACKEND:latest and $IMAGE_BACKEND:$IMAGE_TAG"
+          echo "Building backend image: $IMAGE_NAME:latest and $IMAGE_NAME:$IMAGE_TAG"
           docker build --build-arg DATABASE_URL=${{ secrets.DATABASE_URL }} \
                        --build-arg FRONTEND_URL=${{ secrets.FRONTEND_URL }} \
-                       -t $IMAGE_BACKEND:latest -t $IMAGE_BACKEND:$IMAGE_TAG ./backend
-          docker push $IMAGE_BACKEND:latest
-          docker push $IMAGE_BACKEND:$IMAGE_TAG
+                       -t $IMAGE_NAME:latest -t $IMAGE_NAME:$IMAGE_TAG ./backend
+          docker push $IMAGE_NAME:latest
+          docker push $IMAGE_NAME:$IMAGE_TAG
+          echo "::set-output name=backend_repo_name::$IMAGE_NAME"
           echo "::set-output name=backend_tag::$IMAGE_TAG"
         shell: bash
 
@@ -127,7 +131,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Cleanup ECR Images
-        run: ./scripts/cleanup_ecr.sh ${{ needs.integration-test.outputs.frontend_tag }} ${{ needs.integration-test.outputs.backend_tag }}
+        run: ./scripts/cleanup_ecr.sh ${{ needs.integration-test.outputs.frontend_repo_name }} ${{ needs.integration-test.outputs.backend_repo_name }} ${{ needs.integration-test.outputs.frontend_tag }} ${{ needs.integration-test.outputs.backend_tag }}
         shell: bash
 
   build-and-push:

@@ -141,6 +141,10 @@ jobs:
           chmod 600 ${{ github.workspace }}/infra/scripts/ec2-key.pem
         shell: bash
 
+      - name: Add Host key to Known Hosts
+        run: ssh-keyscan -H ${{ steps.launch_ec2.outputs.public_ip }} >> ~/.ssh/known_hosts
+        shell: bash
+
       # Run integration test on the EC2 instance
       - name: Run Integration Test on EC2
         id: integration_test
@@ -190,7 +194,7 @@ jobs:
   cleanup:
     name: Cleanup ECR Images on Failure
     needs: [build-and-push, integration-test]
-    if: ${{ needs.integration-test.outputs.test-passed != 'success' }}
+    if: failure() || ${{ needs.integration-test.outputs.test-passed != 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Cleanup ECR Images

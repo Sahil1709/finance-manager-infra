@@ -46,8 +46,12 @@ BACKEND_RESULT=$(curl -s http://localhost:8000/health/)
 
 if echo "$FRONTEND_RESULT" | grep "Finance Manager" && echo "$BACKEND_RESULT" | grep healthy; then
   echo "SUCCESS" > /tmp/smoke_test_result.txt
+  echo "::set-output name=result::success"
+  docker compose down
+  exit 0
 else
   echo "FAILURE: Smoke tests did not pass." > /tmp/smoke_test_result.txt
+  echo "::set-output name=result::failure"
   docker compose down
   exit 1
 fi

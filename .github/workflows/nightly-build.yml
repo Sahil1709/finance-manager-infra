@@ -141,9 +141,15 @@ jobs:
           chmod 600 ${{ github.workspace }}/infra/scripts/ec2-key.pem
         shell: bash
 
+      - name: Wait for SSH Access
+        run: |
+          until nc -zv ${{ steps.create-ec2.outputs.public_ip }} 22; do
+              echo "Waiting for SSH access..."
+              sleep 10
+          done
+
       - name: Add Host key to Known Hosts
         run: |
-          mkdir -p ~/.ssh
           ssh-keyscan -H ${{ steps.launch_ec2.outputs.public_ip }} >> ~/.ssh/known_hosts
         shell: bash
 

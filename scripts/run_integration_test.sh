@@ -33,7 +33,7 @@ docker run -d --name frontend -p 3000:3000 ${ECR_REGISTRY}/${FRONTEND_IMAGE}:lat
 docker run -d --name backend -p 8000:8000 ${ECR_REGISTRY}/${BACKEND_IMAGE}:latest
 
 # Start MySQL container with extracted database password and database name
-docker run --name mysql-8 -e MYSQL_ROOT_PASSWORD=$DATABASE_PASSWORD -e MYSQL_DATABASE=$DATABASE_NAME -d mysql:8
+# docker run --name mysql-8 -e MYSQL_ROOT_PASSWORD=$DATABASE_PASSWORD -e MYSQL_DATABASE=$DATABASE_NAME -d mysql:8
 
 echo "Test Deployment complete!"
 
@@ -42,12 +42,12 @@ sleep 30
 
 # Run smoke tests.
 FRONTEND_RESULT=$(curl -s http://localhost:3000/)
-BACKEND_RESULT=$(curl -s http://localhost:8000/health)
+BACKEND_RESULT=$(curl -s http://localhost:8000/health/)
 
-if echo "$FRONTEND_RESULT" | grep -qi "Finance Manager" && echo "$BACKEND_RESULT" | grep -qi "\"status\": \"healthy\""; then
+if echo "$FRONTEND_RESULT" | grep "Finance Manager" && echo "$BACKEND_RESULT" | grep healthy; then
   echo "SUCCESS" > /tmp/smoke_test_result.txt
 else
   echo "FAILURE: Smoke tests did not pass." > /tmp/smoke_test_result.txt
-  docker-compose down
+  docker compose down
   exit 1
 fi

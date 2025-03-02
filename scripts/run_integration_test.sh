@@ -14,10 +14,6 @@ export NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
 export DATABASE_URL=$DATABASE_URL
 export FRONTEND_URL=$FRONTEND_URL
 
-# For testing 
-echo "ECR_REGISTRY: ${ECR_REGISTRY}"
-echo "ECR different format: $ECR_REGISTRY"
-
 # Write AWS credentials to ~/.aws/credentials using env vars passed from the workflow.
 mkdir -p ~/.aws
 cat <<EOF > ~/.aws/credentials
@@ -58,11 +54,13 @@ FRONTEND_RESULT=$(curl -s http://localhost:3000/)
 BACKEND_RESULT=$(curl -s http://localhost:8000/health/)
 
 if echo "$FRONTEND_RESULT" | grep "Finance Manager" && echo "$BACKEND_RESULT" | grep healthy; then
+  echo "SUCCESS: Smoke tests passed."
   echo "SUCCESS" > /tmp/smoke_test_result.txt
   echo "::set-output name=result::success"
   docker compose down
   exit 0
 else
+  echo "FAILURE: Smoke tests did not pass."
   echo "FAILURE: Smoke tests did not pass." > /tmp/smoke_test_result.txt
   echo "::set-output name=result::failure"
   docker compose down

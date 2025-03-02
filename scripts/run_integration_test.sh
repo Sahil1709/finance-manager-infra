@@ -4,6 +4,19 @@ set -e
 export ECR_REGISTRY=$ECR_REGISTRY
 export FRONTEND_IMAGE="sahil1709/finance-manager-frontend"
 export BACKEND_IMAGE="sahil1709/finance-manager-backend"
+export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+export AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN
+export AWS_REGION=$AWS_REGION
+export NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+export CLERK_SECRET_KEY=$CLERK_SECRET_KEY
+export NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
+export DATABASE_URL=$DATABASE_URL
+export FRONTEND_URL=$FRONTEND_URL
+
+# For testing 
+echo "ECR_REGISTRY: ${ECR_REGISTRY}"
+echo "ECR different format: $ECR_REGISTRY"
 
 # Write AWS credentials to ~/.aws/credentials using env vars passed from the workflow.
 mkdir -p ~/.aws

@@ -10,8 +10,102 @@ permissions:
   packages: write
 
 jobs:
+  integration-test:
+    runs-on: ubuntu-latest
+    outputs:
+      test-passed: ${{ steps.integration_test.outputs.result }}
+      instance_id: ${{ steps.launch_ec2.outputs.instance_id }}
+      public_ip: ${{ steps.launch_ec2.outputs.public_ip }}
+    steps:
+      - name: Checkout Infra Repo
+        uses: actions/checkout@v4
+        with:
+          path: infra
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: us-east-1
+
+      - name: Set scripts executable
+        run: chmod +x ${{ github.workspace }}/infra/scripts/*.sh
+        shell: bash
+
+      # Launch temporary EC2 instance
+      - name: Launch Temporary EC2 Instance
+        id: launch_ec2
+        run: ${{ github.workspace }}/infra/scripts/launch_ec2.sh
+        shell: bash
+
+      - name: Save EC2 Key Pair
+        run: |
+          cat << EOF > ${{ github.workspace }}/infra/scripts/ec2-key.pem
+          ${{ secrets.EC2_SSH_KEY }}
+          EOF
+          
+          chmod 600 ${{ github.workspace }}/infra/scripts/ec2-key.pem
+        shell: bash
+
+      - name: Wait for SSH Access
+        run: |
+          until nc -zv ${{ steps.launch_ec2.outputs.public_ip }} 22; do
+              echo "Waiting for SSH access..."
+              sleep 10
+          done
+
+      - name: Add Host key to Known Hosts
+        run: |
+          mkdir -p ~/.ssh
+          touch ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ steps.launch_ec2.outputs.public_ip }} >> ~/.ssh/known_hosts
+        shell: bash
+
+      - name: Run Integration Test on EC2
+        id: integration_test
+        run: |
+            scp -o StrictHostKeyChecking=no \
+                -o UserKnownHostsFile=/dev/null \
+                -o LogLevel=ERROR \
+                -i "${{ github.workspace }}/infra/scripts/ec2-key.pem" \
+                "${{ github.workspace }}/infra/scripts/run_integration_test.sh" \
+                ec2-user@${{ steps.launch_ec2.outputs.public_ip }}:/home/ec2-user/
+
+            ssh -o StrictHostKeyChecking=no \
+                -o UserKnownHostsFile=/dev/null \
+                -i "${{ github.workspace }}/infra/scripts/ec2-key.pem" \
+                ec2-user@${{ steps.launch_ec2.outputs.public_ip }} <<EOF
+            export DATABASE_URL=${DATABASE_URL}
+            export FRONTEND_URL=${FRONTEND_URL}
+            export MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+            export MYSQL_DATABASE=${MYSQL_DATABASE}
+            export NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+            export CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
+            export NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL}
+            chmod +x /home/ec2-user/run_integration_test.sh
+            /home/ec2-user/run_integration_test.sh
+            EOF
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_TEST }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL_TEST }}
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD_TEST }}
+          MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE_TEST }}
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          NEXT_PUBLIC_BACKEND_URL: ${{ secrets.NEXT_PUBLIC_BACKEND_URL }}
+
+      - name: Terminate EC2 Instance
+        if: always()
+        run: ${{ github.workspace }}/infra/scripts/terminate_ec2.sh ${{ steps.launch_ec2.outputs.instance_id }}
+        shell: bash
+
   build-and-push:
     runs-on: ubuntu-latest
+    needs: [integration-test]
+    if : ${{ needs.integration-test.outputs.test-passed == 'success' }}
     env:
       AWS_REGION: us-east-1
       EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
@@ -99,106 +193,6 @@ jobs:
           docker push $IMAGE_NAME:$IMAGE_TAG
           echo "::set-output name=backend_repo_name::$IMAGE_NAME"
           echo "::set-output name=backend_tag::$IMAGE_TAG"
-        shell: bash
-
-  integration-test:
-    runs-on: ubuntu-latest
-    needs: build-and-push
-    outputs:
-      test-passed: ${{ steps.integration_test.outputs.result }}
-      instance_id: ${{ steps.launch_ec2.outputs.instance_id }}
-      public_ip: ${{ steps.launch_ec2.outputs.public_ip }}
-    steps:
-      - name: Checkout Infra Repo
-        uses: actions/checkout@v4
-        with:
-          path: infra
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: us-east-1
-
-      - name: Set scripts executable
-        run: chmod +x ${{ github.workspace }}/infra/scripts/*.sh
-        shell: bash
-
-      # Launch temporary EC2 instance
-      - name: Launch Temporary EC2 Instance
-        id: launch_ec2
-        run: ${{ github.workspace }}/infra/scripts/launch_ec2.sh
-        shell: bash
-
-      - name: Save EC2 Key Pair
-        run: |
-          cat << EOF > ${{ github.workspace }}/infra/scripts/ec2-key.pem
-          ${{ secrets.EC2_SSH_KEY }}
-          EOF
-          
-          chmod 600 ${{ github.workspace }}/infra/scripts/ec2-key.pem
-        shell: bash
-
-      - name: Wait for SSH Access
-        run: |
-          until nc -zv ${{ steps.launch_ec2.outputs.public_ip }} 22; do
-              echo "Waiting for SSH access..."
-              sleep 10
-          done
-
-      - name: Add Host key to Known Hosts
-        run: |
-          mkdir -p ~/.ssh
-          touch ~/.ssh/known_hosts
-          ssh-keyscan -H ${{ steps.launch_ec2.outputs.public_ip }} >> ~/.ssh/known_hosts
-        shell: bash
-
-      - name: Run Integration Test on EC2
-        id: integration_test
-        run: |
-            scp -o StrictHostKeyChecking=no \
-                -o UserKnownHostsFile=/dev/null \
-                -o LogLevel=ERROR \
-                -i "${{ github.workspace }}/infra/scripts/ec2-key.pem" \
-                "${{ github.workspace }}/infra/scripts/run_integration_test.sh" \
-                ec2-user@${{ steps.launch_ec2.outputs.public_ip }}:/home/ec2-user/
-
-            ssh -o StrictHostKeyChecking=no \
-                -o UserKnownHostsFile=/dev/null \
-                -i "${{ github.workspace }}/infra/scripts/ec2-key.pem" \
-                ec2-user@${{ steps.launch_ec2.outputs.public_ip }} <<EOF
-            export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-            export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-            export AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN}
-            export AWS_REGION=${AWS_REGION}
-            export ECR_REGISTRY=${ECR_REGISTRY}
-            export NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
-            export CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
-            export NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL}
-            export DATABASE_URL=${DATABASE_URL}
-            export FRONTEND_URL=${FRONTEND_URL}
-            chmod +x /home/ec2-user/run_integration_test.sh
-            /home/ec2-user/run_integration_test.sh
-            EOF
-        shell: bash
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
-          AWS_REGION: ${{ env.AWS_REGION }}
-          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
-          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
-          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
-          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
-          NEXT_PUBLIC_BACKEND_URL: ${{ secrets.NEXT_PUBLIC_BACKEND_URL }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
-
-      - name: Terminate EC2 Instance
-        if: always()
-        run: ${{ github.workspace }}/infra/scripts/terminate_ec2.sh ${{ steps.launch_ec2.outputs.instance_id }}
         shell: bash
 
   cleanup:

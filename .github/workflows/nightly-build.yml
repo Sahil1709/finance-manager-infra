@@ -134,7 +134,10 @@ jobs:
 
       - name: Save EC2 Key Pair
         run: |
-          echo ${{secrets.EC2_SSH_KEY}} > ${{ github.workspace }}/infra/scripts/ec2-key.pem
+          cat << EOF > ${{ github.workspace }}/infra/scripts/ec2-key.pem
+          ${{ secrets.EC2_SSH_KEY }}
+          EOF
+          
           chmod 600 ${{ github.workspace }}/infra/scripts/ec2-key.pem
         shell: bash
 

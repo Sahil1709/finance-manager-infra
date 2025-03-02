@@ -23,17 +23,6 @@ docker pull ${ECR_REGISTRY}/${FRONTEND_IMAGE}:latest
 echo "Pulling latest backend image..."
 docker pull ${ECR_REGISTRY}/${BACKEND_IMAGE}:latest
 
-# Stop and remove existing containers (if any)
-echo "Stopping existing containers..."
-docker rm -f frontend || true
-docker rm -f backend || true
-
-# Remove older images
-echo "Removing older frontend images..."
-docker images ${ECR_REGISTRY}/${FRONTEND_IMAGE} --format "{{.ID}}" | tail -n +2 | xargs -r docker rmi
-echo "Removing older backend images..."
-docker images ${ECR_REGISTRY}/${BACKEND_IMAGE} --format "{{.ID}}" | tail -n +2 | xargs -r docker rmi
-
 # Extract database password and database name from DATABASE_URL
 DATABASE_PASSWORD=$(echo $DATABASE_URL | sed -n 's/.*:\/\/.*:\(.*\)@.*/\1/p')
 DATABASE_NAME=$(echo $DATABASE_URL | sed -n 's/.*:\/\/.*\/\(.*\)/\1/p')

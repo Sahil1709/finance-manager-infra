@@ -143,7 +143,7 @@ jobs:
 
       - name: Wait for SSH Access
         run: |
-          until nc -zv ${{ steps.create-ec2.outputs.public_ip }} 22; do
+          until nc -zv ${{ steps.launch_ec2.outputs.public_ip }} 22; do
               echo "Waiting for SSH access..."
               sleep 10
           done

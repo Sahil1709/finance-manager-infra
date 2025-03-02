@@ -142,7 +142,9 @@ jobs:
         shell: bash
 
       - name: Add Host key to Known Hosts
-        run: ssh-keyscan -H ${{ steps.launch_ec2.outputs.public_ip }} >> ~/.ssh/known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ steps.launch_ec2.outputs.public_ip }} >> ~/.ssh/known_hosts
         shell: bash
 
       # Run integration test on the EC2 instance

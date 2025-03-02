@@ -12,7 +12,7 @@ export NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
 
 echo "DATABASE_URL: $DATABASE_URL"
 
-cd finance-manager-infra
+cd finance-manager
 git pull
 docker compose up -d
 

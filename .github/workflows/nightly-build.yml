@@ -42,6 +42,11 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: us-east-1
 
+      - name: Log in to AWS ECR
+        run: |
+          aws ecr get-login-password --region us-east-1 | \
+          docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
+
       - name: Setup Python & Run Tests
         working-directory: backend
         run: |

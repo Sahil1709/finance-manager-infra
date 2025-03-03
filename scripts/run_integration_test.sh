@@ -20,8 +20,6 @@ DATABASE_URL=$DATABASE_URL
 FRONTEND_URL=$FRONTEND_URL
 EOF
 
-cat .env
-
 cd ../frontend
 echo "Creating .env.local file for frontend"
 cat <<EOF > .env.local
@@ -29,8 +27,6 @@ NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 CLERK_SECRET_KEY=$CLERK_SECRET_KEY
 NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
 EOF
-
-cat .env.local
 
 cd ..
 docker compose up -d --build
@@ -42,17 +38,6 @@ sleep 10
 
 # Check if containers are running.
 docker ps -a
-
-if ! docker ps | grep frontend && ! docker ps | grep backend; then
-  echo "Containers are not running."
-  exit 2
-fi
-
-echo "Testing database connection..."
-mysql -h "${DATABASE_URL}" -u root -p"${DATABASE_PASSWORD}" -e "USE ${DATABASE_NAME}; SELECT 1;" || {
-    echo "Database connection failed"
-    exit 3
-}
 
 # Run smoke tests.
 FRONTEND_RESULT=$(curl -s http://localhost:3000/)

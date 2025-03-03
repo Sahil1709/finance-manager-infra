@@ -31,7 +31,7 @@ EOF
 cat .env.local
 
 cd ..
-docker compose up -d
+docker compose up -d --build
 
 echo "Test Deployment complete!"
 

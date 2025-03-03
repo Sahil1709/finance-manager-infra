@@ -230,6 +230,7 @@ jobs:
           ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/ec2-key.pem ec2-user@${{ secrets.ELASTIC_IP }} <<EOF
           cd finance-manager-infra
           git pull
+          source .env
           cd scripts
           ./update_images.sh
           EOF

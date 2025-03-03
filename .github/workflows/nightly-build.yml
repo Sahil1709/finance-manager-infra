@@ -191,7 +191,7 @@ jobs:
           cat <<EOF > .env
           DATABASE_URL=${{ secrets.DATABASE_URL }}
           FRONTEND_URL=${{ secrets.FRONTEND_URL }}
-          EOF 
+          EOF
           IMAGE_NAME="${{ secrets.ECR_REGISTRY }}/sahil1709/finance-manager-backend"
           IMAGE_TAG=$(date +'%Y%m%d%H%M%S')
           echo "Building backend image: $IMAGE_NAME:latest and $IMAGE_NAME:$IMAGE_TAG"

@@ -14,6 +14,7 @@ cd finance-manager
 git pull
 
 cd backend
+echo "Creating .env file for backend"
 echo <<EOF > .env
 DATABASE_URL=$DATABASE_URL
 FRONTEND_URL=$FRONTEND_URL
@@ -22,6 +23,7 @@ EOF
 cat .env
 
 cd ../frontend
+echo "Creating .env.local file for frontend"
 echo <<EOF > .env.local
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 CLERK_SECRET_KEY=$CLERK_SECRET_KEY

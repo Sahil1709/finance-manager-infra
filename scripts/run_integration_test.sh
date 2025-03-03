@@ -10,10 +10,23 @@ export CLERK_SECRET_KEY=$CLERK_SECRET_KEY
 export NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
 
 
-echo "DATABASE_URL: $DATABASE_URL"
-
 cd finance-manager
 git pull
+
+cd backend
+echo <<EOF > .env
+DATABASE_URL=$DATABASE_URL
+FRONTEND_URL=$FRONTEND_URL
+EOF
+
+cd ../frontend
+echo <<EOF > .env.local
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+CLERK_SECRET_KEY=$CLERK_SECRET_KEY
+NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
+EOF
+
+cd ..
 docker compose up -d
 
 echo "Test Deployment complete!"
@@ -44,7 +57,6 @@ if echo "$FRONTEND_RESULT" | grep "Finance Manager" && echo "$BACKEND_RESULT" | 
   echo "SUCCESS" > /tmp/smoke_test_result.txt
   echo "::set-output name=result::success"
   docker compose down
-  exit 0
 else
   echo "FAILURE: Smoke tests did not pass."
   echo "FAILURE: Smoke tests did not pass." > /tmp/smoke_test_result.txt

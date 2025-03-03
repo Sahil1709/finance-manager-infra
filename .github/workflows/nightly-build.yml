@@ -203,3 +203,34 @@ jobs:
           echo "::set-output name=backend_repo_name::$IMAGE_NAME"
           echo "::set-output name=backend_tag::$IMAGE_TAG"
         shell: bash
+
+  deploy-to-QA:
+    runs-on: ubuntu-latest
+    needs: [integration-test, build-and-push]
+    if: ${{ needs.integration-test.outputs.test-passed == 'success' }}
+    steps:
+      - name: Save EC2 Key Pair
+        run: |
+          cat << EOF > ~/ec2-key.pem
+          ${{ secrets.EC2_SSH_KEY }}
+          EOF
+          
+          chmod 600 ~/ec2-key.pem
+        shell: bash
+
+      - name: Add Host key to Known Hosts
+        run: |
+          mkdir -p ~/.ssh
+          touch ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.ELASTIC_IP }} >> ~/.ssh/known_hosts
+        shell: bash
+
+      - name: SSH into EC2 and Update Images
+        run: |
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/ec2-key.pem ec2-user@${{ secrets.ELASTIC_IP }} <<EOF
+          cd finance-manager-infra
+          git pull
+          cd scripts
+          ./update_images.sh
+          EOF
+        shell: bash

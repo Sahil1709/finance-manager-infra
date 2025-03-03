@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+source ../.env
 
 # Authenticate Docker to ECR
 aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $ECR_REGISTRY

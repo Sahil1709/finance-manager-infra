@@ -7,7 +7,7 @@ LAUNCH_OUTPUT=$(aws ec2 run-instances \
   --count 1 \
   --instance-type t3.medium \
   --key-name aws-academy-key \
-  --security-group-ids sg-0a675cf6604c9961a \
+  --security-group-ids sg-03a9f974784ee33e9 \
   --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=IntegrationTestInstance}]')
 
 INSTANCE_ID=$(echo "$LAUNCH_OUTPUT" | jq -r '.Instances[0].InstanceId')

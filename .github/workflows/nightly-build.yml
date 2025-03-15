@@ -228,6 +228,13 @@ jobs:
       - name: SSH into EC2 and Update Images
         run: |
           ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/ec2-key.pem ec2-user@${{ secrets.ELASTIC_IP }} <<EOF
+          mkdir -p ~/.aws
+          cat << EOF > ~/.aws/credentials
+          [default]
+          aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws_session_token=${{ secrets.AWS_SESSION_TOKEN }}
+          EOF
           cd finance-manager-infra
           git pull
           source .env

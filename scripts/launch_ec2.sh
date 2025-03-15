@@ -3,7 +3,7 @@ set -e
 
 # Launch an EC2 instance using a preconfigured AMI with Docker and docker-compose installed.
 LAUNCH_OUTPUT=$(aws ec2 run-instances \
-  --image-id ami-09c4c9ed89baac855 \
+  --image-id ami-0a3e2f047024111fe \
   --count 1 \
   --instance-type t3.medium \
   --key-name aws-academy-key \

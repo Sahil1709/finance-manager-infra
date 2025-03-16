@@ -258,9 +258,11 @@ jobs:
           aws_session_token=${{ secrets.AWS_SESSION_TOKEN }}
           CRED
           cd finance-manager-infra
+          git stash
           git pull
           source .env
           cd scripts
+          chmod +x update_images.sh
           ./update_images.sh
           EOF
         shell: bash
@@ -295,9 +297,11 @@ jobs:
           aws_session_token=${{ secrets.AWS_SESSION_TOKEN }}
           CRED
           cd finance-manager-infra
+          git stash
           git pull
           source .env
           cd scripts
+          chmod +x update_images_rc.sh
           ./update_images_rc.sh
           EOF
         shell: bash

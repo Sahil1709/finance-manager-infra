@@ -8,8 +8,12 @@ on:
     types: [rc_deploy]
 
 permissions:
-  contents: read
+  contents: write
   packages: write
+  checks: write
+  pull-requests: write
+  issues: write
+  deployments: write
 
 jobs:
   integration-test:
@@ -119,6 +123,8 @@ jobs:
       NEXT_PUBLIC_BACKEND_URL: ${{ secrets.NEXT_PUBLIC_BACKEND_URL }}
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+      GH_PAT_TOKEN: ${{ secrets.GH_PAT_TOKEN }}
+      GH_TOKEN: ${{ secrets.GH_PAT_TOKEN }}
     outputs:
       frontend_repo_name: ${{ steps.build_frontend.outputs.frontend_repo_name }}
       backend_repo_name: ${{ steps.build_backend.outputs.backend_repo_name }}
@@ -145,9 +151,7 @@ jobs:
           cd src
           npm install
           npm run release
-        shell: bash
-        env:
-          GH_PAT_TOKEN: ${{ secrets.GH_PAT_TOKEN }}
+        shell: bash          
 
       - name: Setup Python
         uses: actions/setup-python@v5

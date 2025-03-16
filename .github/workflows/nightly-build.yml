@@ -141,22 +141,6 @@ jobs:
           fetch-depth: 0
           path: src
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Check GH_TOKEN
-        run: echo "GH_TOKEN is set ${GH_TOKEN:+yes}" 
-        shell: bash
-
-      - name: Run Semantic Release
-        run: |
-          cd src
-          npm install
-          npm run release
-        shell: bash          
-
       - name: Setup Python
         uses: actions/setup-python@v5
         with:

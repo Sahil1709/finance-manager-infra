@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: '0 8 * * *'
   workflow_dispatch:
+    inputs:
+      event_type:
+        description: 'Event that triggered this workflow'
   repository_dispatch:
     types: [rc_deploy]
 

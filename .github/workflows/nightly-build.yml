@@ -88,6 +88,7 @@ jobs:
                 ec2-user@${{ steps.launch_ec2.outputs.public_ip }} <<EOF
             export DATABASE_URL=${DATABASE_URL}
             export FRONTEND_URL=${FRONTEND_URL}
+            export FRONTEND_RC_URL=${FRONTEND_RC_URL}
             export MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
             export MYSQL_DATABASE=${MYSQL_DATABASE}
             export NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
@@ -100,6 +101,7 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL_TEST }}
           FRONTEND_URL: ${{ secrets.FRONTEND_URL_TEST }}
+          FRONTEND_RC_URL: ${{ secrets.FRONTEND_RC_URL }}
           MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD_TEST }}
           MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE_TEST }}
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
@@ -124,6 +126,7 @@ jobs:
       NEXT_PUBLIC_BACKEND_URL: ${{ secrets.NEXT_PUBLIC_BACKEND_URL }}
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+      FRONTEND_RC_URL: ${{ secrets.FRONTEND_RC_URL }}
       GH_PAT_TOKEN: ${{ secrets.GH_PAT_TOKEN }}
       GH_TOKEN: ${{ secrets.GH_PAT_TOKEN }}
     outputs:
@@ -216,12 +219,14 @@ jobs:
           cat <<EOF > .env
           DATABASE_URL=${{ secrets.DATABASE_URL }}
           FRONTEND_URL=${{ secrets.FRONTEND_URL }}
+          FRONTEND_RC_URL=${{ secrets.FRONTEND_RC_URL }}
           EOF
           IMAGE_NAME="${{ secrets.ECR_REGISTRY }}/sahil1709/finance-manager-backend"
           IMAGE_TAG=$(date +'%Y%m%d%H%M%S')
           echo "Building backend image: $IMAGE_NAME:latest, $IMAGE_NAME:$IMAGE_TAG, and $IMAGE_NAME:${{ steps.get_rc_tag.outputs.rc_tag }}"
           docker build --build-arg DATABASE_URL=${{ secrets.DATABASE_URL }} \
                        --build-arg FRONTEND_URL=${{ secrets.FRONTEND_URL }} \
+                        --build-arg FRONTEND_RC_URL=${{ secrets.FRONTEND_RC_URL }} \
                        -t $IMAGE_NAME:latest -t $IMAGE_NAME:$IMAGE_TAG -t $IMAGE_NAME:${{ steps.get_rc_tag.outputs.rc_tag }} .
           docker push $IMAGE_NAME:latest
           docker push $IMAGE_NAME:$IMAGE_TAG

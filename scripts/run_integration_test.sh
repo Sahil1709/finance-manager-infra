@@ -18,6 +18,7 @@ echo "Creating .env file for backend"
 cat <<EOF > .env
 DATABASE_URL=$DATABASE_URL
 FRONTEND_URL=$FRONTEND_URL
+FRONTEND_RC_URL=$FRONTEND_RC_URL
 EOF
 
 cd ../frontend

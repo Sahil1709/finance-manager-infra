@@ -147,7 +147,7 @@ jobs:
           node-version: '20'
 
       - name: Check GH_TOKEN
-        run: echo "GH_TOKEN is set: ${GH_TOKEN:+yes}" 
+        run: echo "GH_TOKEN is set ${GH_TOKEN:+yes}" 
         shell: bash
 
       - name: Run Semantic Release

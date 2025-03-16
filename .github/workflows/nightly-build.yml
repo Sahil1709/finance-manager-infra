@@ -229,7 +229,7 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/ec2-key.pem ec2-user@${{ secrets.ELASTIC_IP }} <<EOF
           mkdir -p ~/.aws
-          cat << EOF > ~/.aws/credentials
+          cat <<EOF > ~/.aws/credentials
           [default]
           aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -240,5 +240,4 @@ jobs:
           source .env
           cd scripts
           ./update_images.sh
-          EOF
         shell: bash

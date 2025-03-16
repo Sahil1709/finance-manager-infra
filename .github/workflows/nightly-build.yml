@@ -144,7 +144,7 @@ jobs:
           npx semantic-release
         shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT_TOKEN }}
 
       - name: Setup Python
         uses: actions/setup-python@v5

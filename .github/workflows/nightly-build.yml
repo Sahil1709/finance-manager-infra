@@ -196,14 +196,14 @@ jobs:
           EOF
           IMAGE_NAME="${{ secrets.ECR_REGISTRY }}/sahil1709/finance-manager-frontend"
           IMAGE_TAG=$(date +'%Y%m%d%H%M%S')
-          echo "Building frontend image: $IMAGE_NAME:latest, $IMAGE_NAME:$IMAGE_TAG, and $IMAGE_NAME:${{ needs.get_rc_tag.outputs.rc_tag }}"
+          echo "Building frontend image: $IMAGE_NAME:latest, $IMAGE_NAME:$IMAGE_TAG, and $IMAGE_NAME:${{ steps.get_rc_tag.outputs.rc_tag }}"
           docker build --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }} \
                        --build-arg CLERK_SECRET_KEY=${{ secrets.CLERK_SECRET_KEY }} \
                        --build-arg NEXT_PUBLIC_BACKEND_URL=${{ secrets.NEXT_PUBLIC_BACKEND_URL }} \
-                       -t $IMAGE_NAME:latest -t $IMAGE_NAME:$IMAGE_TAG -t $IMAGE_NAME:${{ needs.get_rc_tag.outputs.rc_tag }} .
+                       -t $IMAGE_NAME:latest -t $IMAGE_NAME:$IMAGE_TAG -t $IMAGE_NAME:${{ steps.get_rc_tag.outputs.rc_tag }} .
           docker push $IMAGE_NAME:latest
           docker push $IMAGE_NAME:$IMAGE_TAG
-          docker push $IMAGE_NAME:${{ needs.get_rc_tag.outputs.rc_tag }}
+          docker push $IMAGE_NAME:${{ steps.get_rc_tag.outputs.rc_tag }}
           echo "::set-output name=frontend_repo_name::$IMAGE_NAME"
           echo "::set-output name=frontend_tag::$IMAGE_TAG"
         shell: bash
@@ -218,13 +218,13 @@ jobs:
           EOF
           IMAGE_NAME="${{ secrets.ECR_REGISTRY }}/sahil1709/finance-manager-backend"
           IMAGE_TAG=$(date +'%Y%m%d%H%M%S')
-          echo "Building backend image: $IMAGE_NAME:latest, $IMAGE_NAME:$IMAGE_TAG, and $IMAGE_NAME:${{ needs.get_rc_tag.outputs.rc_tag }}"
+          echo "Building backend image: $IMAGE_NAME:latest, $IMAGE_NAME:$IMAGE_TAG, and $IMAGE_NAME:${{ steps.get_rc_tag.outputs.rc_tag }}"
           docker build --build-arg DATABASE_URL=${{ secrets.DATABASE_URL }} \
                        --build-arg FRONTEND_URL=${{ secrets.FRONTEND_URL }} \
-                       -t $IMAGE_NAME:latest -t $IMAGE_NAME:$IMAGE_TAG -t $IMAGE_NAME:${{ needs.get_rc_tag.outputs.rc_tag }} .
+                       -t $IMAGE_NAME:latest -t $IMAGE_NAME:$IMAGE_TAG -t $IMAGE_NAME:${{ steps.get_rc_tag.outputs.rc_tag }} .
           docker push $IMAGE_NAME:latest
           docker push $IMAGE_NAME:$IMAGE_TAG
-          docker push $IMAGE_NAME:${{ needs.get_rc_tag.outputs.rc_tag }}
+          docker push $IMAGE_NAME:${{ steps.get_rc_tag.outputs.rc_tag }}
           echo "::set-output name=backend_repo_name::$IMAGE_NAME"
           echo "::set-output name=backend_tag::$IMAGE_TAG"
         shell: bash

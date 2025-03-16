@@ -4,6 +4,8 @@ on:
   schedule:
     - cron: '0 8 * * *'
   workflow_dispatch:
+  repository_dispatch:
+    types: [rc_deploy]
 
 permissions:
   contents: read
@@ -120,6 +122,7 @@ jobs:
       backend_repo_name: ${{ steps.build_backend.outputs.backend_repo_name }}
       frontend_tag: ${{ steps.build_frontend.outputs.frontend_tag }}
       backend_tag: ${{ steps.build_backend.outputs.backend_tag }}
+      rc_tag: ${{ steps.get_rc_tag.outputs.rc_tag }}
     steps:
       - name: Checkout Source Repository
         uses: actions/checkout@v4
@@ -129,6 +132,19 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
           path: src
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run Semantic Release
+        run: |
+          cd src
+          npx semantic-release
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -162,6 +178,18 @@ jobs:
           aws ecr get-login-password --region us-east-1 | \
           docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
 
+      - name: Get Latest RC Tag
+        id: get_rc_tag
+        run: |
+          RC_TAG=$(curl -s https://api.github.com/repos/Sahil1709/finance-manager/releases | jq -r 'map(select(.tag_name | test("-rc"))) | .[0].tag_name')
+          echo "Latest RC tag: ${RC_TAG}"
+          if [ -n "$RC_TAG" ] && [ "$RC_TAG" != "null" ]; then
+            echo "::set-output name=rc_tag::$RC_TAG"
+          else
+            echo "::set-output name=rc_tag::"
+          fi
+        shell: bash
+
       - name: Build & Push Frontend Image
         id: build_frontend
         run: |
@@ -173,13 +201,14 @@ jobs:
           EOF
           IMAGE_NAME="${{ secrets.ECR_REGISTRY }}/sahil1709/finance-manager-frontend"
           IMAGE_TAG=$(date +'%Y%m%d%H%M%S')
-          echo "Building frontend image: $IMAGE_NAME:latest and $IMAGE_NAME:$IMAGE_TAG"
+          echo "Building frontend image: $IMAGE_NAME:latest, $IMAGE_NAME:$IMAGE_TAG, and $IMAGE_NAME:${{ needs.get_rc_tag.outputs.rc_tag }}"
           docker build --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }} \
                        --build-arg CLERK_SECRET_KEY=${{ secrets.CLERK_SECRET_KEY }} \
                        --build-arg NEXT_PUBLIC_BACKEND_URL=${{ secrets.NEXT_PUBLIC_BACKEND_URL }} \
-                       -t $IMAGE_NAME:latest -t $IMAGE_NAME:$IMAGE_TAG .
+                       -t $IMAGE_NAME:latest -t $IMAGE_NAME:$IMAGE_TAG -t $IMAGE_NAME:${{ needs.get_rc_tag.outputs.rc_tag }} .
           docker push $IMAGE_NAME:latest
           docker push $IMAGE_NAME:$IMAGE_TAG
+          docker push $IMAGE_NAME:${{ needs.get_rc_tag.outputs.rc_tag }}
           echo "::set-output name=frontend_repo_name::$IMAGE_NAME"
           echo "::set-output name=frontend_tag::$IMAGE_TAG"
         shell: bash
@@ -194,12 +223,13 @@ jobs:
           EOF
           IMAGE_NAME="${{ secrets.ECR_REGISTRY }}/sahil1709/finance-manager-backend"
           IMAGE_TAG=$(date +'%Y%m%d%H%M%S')
-          echo "Building backend image: $IMAGE_NAME:latest and $IMAGE_NAME:$IMAGE_TAG"
+          echo "Building backend image: $IMAGE_NAME:latest, $IMAGE_NAME:$IMAGE_TAG, and $IMAGE_NAME:${{ needs.get_rc_tag.outputs.rc_tag }}"
           docker build --build-arg DATABASE_URL=${{ secrets.DATABASE_URL }} \
                        --build-arg FRONTEND_URL=${{ secrets.FRONTEND_URL }} \
-                       -t $IMAGE_NAME:latest -t $IMAGE_NAME:$IMAGE_TAG .
+                       -t $IMAGE_NAME:latest -t $IMAGE_NAME:$IMAGE_TAG -t $IMAGE_NAME:${{ needs.get_rc_tag.outputs.rc_tag }} .
           docker push $IMAGE_NAME:latest
           docker push $IMAGE_NAME:$IMAGE_TAG
+          docker push $IMAGE_NAME:${{ needs.get_rc_tag.outputs.rc_tag }}
           echo "::set-output name=backend_repo_name::$IMAGE_NAME"
           echo "::set-output name=backend_tag::$IMAGE_TAG"
         shell: bash
@@ -228,16 +258,53 @@ jobs:
       - name: SSH into EC2 and Update Images
         run: |
           ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/ec2-key.pem ec2-user@${{ secrets.ELASTIC_IP }} <<EOF
-          mkdir -p ~/.aws
-          cat <<EOF > ~/.aws/credentials
+          cat <<CRED > ~/.aws/credentials
           [default]
           aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws_session_token=${{ secrets.AWS_SESSION_TOKEN }}
-          EOF
+          CRED
           cd finance-manager-infra
           git pull
           source .env
           cd scripts
           ./update_images.sh
+          EOF
+        shell: bash
+
+  deploy-to-RC:
+    runs-on: ubuntu-latest
+    needs: [integration-test, build-and-push]
+    if: ${{ needs.integration-test.outputs.test-passed == 'success' }}
+    steps:
+      - name: Save EC2 Key Pair
+        run: |
+          cat << EOF > ~/ec2-key.pem
+          ${{ secrets.EC2_SSH_KEY }}
+          EOF
+          chmod 600 ~/ec2-key.pem
+        shell: bash
+
+      - name: Add Host key to Known Hosts for RC
+        run: |
+          mkdir -p ~/.ssh
+          touch ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.RC_ELASTIC_IP }} >> ~/.ssh/known_hosts
+        shell: bash
+
+      - name: SSH into RC EC2 and Update Images
+        run: |
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/ec2-key.pem ec2-user@${{ secrets.RC_ELASTIC_IP }} <<EOF
+          cat <<CRED > ~/.aws/credentials
+          [default]
+          aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws_session_token=${{ secrets.AWS_SESSION_TOKEN }}
+          CRED
+          cd finance-manager-infra
+          git pull
+          source .env
+          cd scripts
+          ./update_images_rc.sh
+          EOF
         shell: bash

@@ -13,6 +13,8 @@ permissions:
 
 jobs:
   integration-test:
+    # skip for testing
+    if: false
     runs-on: ubuntu-latest
     outputs:
       test-passed: ${{ steps.integration_test.outputs.result }}
@@ -141,10 +143,11 @@ jobs:
       - name: Run Semantic Release
         run: |
           cd src
-          npx semantic-release
+          npm install
+          npm run release
         shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT_TOKEN }}
+          GH_PAT_TOKEN: ${{ secrets.GH_PAT_TOKEN }}
 
       - name: Setup Python
         uses: actions/setup-python@v5

@@ -146,6 +146,12 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Configure Git Credentials
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git remote set-url origin https://${{ secrets.GH_PAT_TOKEN }}@github.com/Sahil1709/finance-manager.git
+
       - name: Run Semantic Release
         run: |
           cd src

@@ -127,6 +127,7 @@ jobs:
       NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
       CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
       NEXT_PUBLIC_BACKEND_URL: ${{ secrets.NEXT_PUBLIC_BACKEND_URL }}
+      NEXT_PUBLIC_ANALYTICS_URL: ${{ secrets.NEXT_PUBLIC_ANALYTICS_URL }}
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
       FRONTEND_RC_URL: ${{ secrets.FRONTEND_RC_URL }}
@@ -208,6 +209,7 @@ jobs:
           docker build --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }} \
                        --build-arg CLERK_SECRET_KEY=${{ secrets.CLERK_SECRET_KEY }} \
                        --build-arg NEXT_PUBLIC_BACKEND_URL=${{ secrets.NEXT_PUBLIC_BACKEND_URL }} \
+                       --build-arg NEXT_PUBLIC_ANALYTICS_URL=${{ secrets.NEXT_PUBLIC_ANALYTICS_URL }} \
                        --build-arg NEXT_PUBLIC_VERSION=${{ steps.get_rc_tag.outputs.rc_tag }} \
                        -t $IMAGE_NAME:latest -t $IMAGE_NAME:$IMAGE_TAG -t $IMAGE_NAME:${{ steps.get_rc_tag.outputs.rc_tag }} .
           docker push $IMAGE_NAME:latest
@@ -281,14 +283,12 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-      - run: aws eks update-kubeconfig --name ${{ secrets.EKS_QA_CLUSTER }}
+      - run: aws eks update-kubeconfig --name ${{ secrets.EKS_QA_CLUSTER }} --region us-east-1
 
       - name: Deploy to QA (blue/green (green overlay)
         run: |
           cd infra/k8s/overlays/qa
-          kustomize build . \
-            --load-restrictor none \
-          | kubectl apply -f -
+          kustomize build . | kubectl apply -f -
           # wait for readiness
           kubectl rollout status deploy/finance-manager-frontend-qa --timeout=120s
           kubectl rollout status deploy/finance-manager-backend-qa  --timeout=120s

@@ -2,6 +2,7 @@
 name: Deploy to EKS (QA, UAT, Prod)
 
 on:
+  workflow_dispatch:
   repository_dispatch:
     types: [qa_deploy, uat_promote, prod_promote]
 
@@ -25,6 +26,7 @@ jobs:
           aws-region: us-east-1
 
       - name: Terraform Init & Apply
+        uses: hashicorp/setup-terraform@v3
         working-directory: terraform
         run: |
           terraform init

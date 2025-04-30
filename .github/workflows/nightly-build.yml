@@ -271,7 +271,8 @@ jobs:
     steps:
       - name: Checkout infra
         uses: actions/checkout@v4
-        with: path: infra
+        with: 
+          path: infra
 
       - name: Configure AWS & kubectl
         uses: aws-actions/configure-aws-credentials@v4

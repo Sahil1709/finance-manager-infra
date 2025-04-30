@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base/deployments.yaml
+  - ../../base/frontend.yaml
+
+images:
+  - name: ${ECR_REGISTRY}/finance-manager-frontend
+    newTag: ${IMAGE_TAG}-ga
+  - name: ${ECR_REGISTRY}/finance-manager-backend
+    newTag: ${IMAGE_TAG}-ga
+  - name: ${ECR_REGISTRY}/finance-manager-analytics
+    newTag: ${IMAGE_TAG}-ga
+
+patchesStrategicMerge:
+  - service-blue.yaml

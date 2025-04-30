@@ -1,0 +1,9 @@
+# infra/k8s/overlays/uat/service-green.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: finance-frontend-svc
+spec:
+  selector:
+    app: finance-frontend
+    variant: green

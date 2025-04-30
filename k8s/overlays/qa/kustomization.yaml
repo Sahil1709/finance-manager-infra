@@ -1,0 +1,10 @@
+resources:
+- ../../base/deployments.yaml
+- ../../base/frontend.yaml
+images:
+- name: finance-manager-frontend
+  newTag: ${IMAGE_TAG}-rc
+- name: finance-manager-backend
+  newTag: ${IMAGE_TAG}-rc
+- name: finance-manager-analytics
+  newTag: ${IMAGE_TAG}-rc

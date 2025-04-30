@@ -1,0 +1,21 @@
+# infra/k8s/overlays/uat/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# base manifests
+resources:
+  - ../../base/deployments.yaml
+  - ../../base/frontend.yaml
+
+# image tag overrides
+images:
+  - name: ${ECR_REGISTRY}/finance-manager-frontend
+    newTag: ${IMAGE_TAG}
+  - name: ${ECR_REGISTRY}/finance-manager-backend
+    newTag: ${IMAGE_TAG}
+  - name: ${ECR_REGISTRY}/finance-manager-analytics
+    newTag: ${IMAGE_TAG}
+
+# patch to switch Service -> green variant
+patchesStrategicMerge:
+  - service-green.yaml

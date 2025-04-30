@@ -1,0 +1,44 @@
+# finance-backend & analytics (no blue/green)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: finance-backend
+spec:
+  replicas: 2
+  selector: { matchLabels: { app: finance-backend } }
+  template:
+    metadata: { labels: { app: finance-backend } }
+    spec:
+      containers:
+      - name: backend
+        image: ${ECR_REGISTRY}/finance-manager-backend:${IMAGE_TAG}
+        ports: [{ containerPort: 8000 }]
+---
+apiVersion: v1
+kind: Service
+metadata: { name: finance-backend-svc }
+spec:
+  ports: [{ port:8000,targetPort:8000 }]
+  selector: { app: finance-backend }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: analytics-service }
+spec:
+  replicas: 2
+  selector: { matchLabels: { app: analytics-service } }
+  template:
+    metadata: { labels: { app: analytics-service } }
+    spec:
+      containers:
+      - name: analytics
+        image: ${ECR_REGISTRY}/finance-manager-analytics:${IMAGE_TAG}
+        ports: [{ containerPort: 8001 }]
+---
+apiVersion: v1
+kind: Service
+metadata: { name: analytics-svc }
+spec:
+  ports: [{ port:8001,targetPort:8001 }]
+  selector: { app: analytics-service }

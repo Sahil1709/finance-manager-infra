@@ -283,7 +283,7 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
       - run: aws eks update-kubeconfig --name ${{ secrets.EKS_QA_CLUSTER }}
 
-      - name: Deploy to QA (blue/green: green overlay)
+      - name: Deploy to QA (blue/green (green overlay)
         run: |
           cd infra/k8s/overlays/qa
           kustomize build . \

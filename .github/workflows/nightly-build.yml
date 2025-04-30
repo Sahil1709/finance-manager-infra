@@ -208,6 +208,7 @@ jobs:
           docker build --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }} \
                        --build-arg CLERK_SECRET_KEY=${{ secrets.CLERK_SECRET_KEY }} \
                        --build-arg NEXT_PUBLIC_BACKEND_URL=${{ secrets.NEXT_PUBLIC_BACKEND_URL }} \
+                       --build-arg NEXT_PUBLIC_VERSION=${{ steps.get_rc_tag.outputs.rc_tag }} \
                        -t $IMAGE_NAME:latest -t $IMAGE_NAME:$IMAGE_TAG -t $IMAGE_NAME:${{ steps.get_rc_tag.outputs.rc_tag }} .
           docker push $IMAGE_NAME:latest
           docker push $IMAGE_NAME:$IMAGE_TAG

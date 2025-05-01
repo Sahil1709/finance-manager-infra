@@ -1,10 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
 resources:
-- ../../base/deployments.yaml
-- ../../base/frontend.yaml
+  - ../../base/deployments.yaml
+  - ../../base/frontend.yaml
+  - ../../base/ingress.yaml
+
 images:
-- name: finance-manager-frontend
-  newTag: ${IMAGE_TAG}-rc
-- name: finance-manager-backend
-  newTag: ${IMAGE_TAG}-rc
-- name: finance-manager-analytics
-  newTag: ${IMAGE_TAG}-rc
+  # note: full registry path goes here
+  - name: finance-manager-frontend
+    newName: 657807460073.dkr.ecr.us-east-1.amazonaws.com/sahil1709/finance-manager-frontend
+    newTag: latest
+  - name: finance-manager-backend
+    newName: 657807460073.dkr.ecr.us-east-1.amazonaws.com/sahil1709/finance-manager-backend
+    newTag: latest
+  - name: finance-manager-analytics
+    newName: 657807460073.dkr.ecr.us-east-1.amazonaws.com/sahil1709/finance-manager-analytics
+    newTag: latest

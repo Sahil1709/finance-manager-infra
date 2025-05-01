@@ -1,0 +1,37 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: frontend-ingress
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - sahilgupta.studio
+    secretName: tls-secret
+  rules:
+  - host: sahilgupta.studio
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: finance-frontend-svc
+            port:
+              number: 80
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: finance-backend-svc
+            port:
+              number: 8000
+      - path: /analytics-api
+        pathType: Prefix
+        backend:
+          service:
+            name: analytics-svc
+            port:
+              number: 8001

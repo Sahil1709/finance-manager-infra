@@ -234,6 +234,7 @@ jobs:
           docker build --build-arg DATABASE_URL=${{ secrets.DATABASE_URL }} \
                        --build-arg FRONTEND_URL=${{ secrets.FRONTEND_URL }} \
                         --build-arg FRONTEND_RC_URL=${{ secrets.FRONTEND_RC_URL }} \
+                        --build-arg FRONTEND_GREEN_URL=${{ secrets.FRONTEND_GREEN_URL }} \
                        -t $IMAGE_NAME:latest -t $IMAGE_NAME:$IMAGE_TAG -t $IMAGE_NAME:${{ steps.get_rc_tag.outputs.rc_tag }} .
           docker push $IMAGE_NAME:latest
           docker push $IMAGE_NAME:$IMAGE_TAG
@@ -252,6 +253,7 @@ jobs:
                        --build-arg FRONTEND_URL=${{ secrets.FRONTEND_URL }} \
                        --build-arg FRONTEND_RC_URL=${{ secrets.FRONTEND_RC_URL }} \
                        --build-arg GROQ_API_KEY=${{ secrets.GROQ_API_KEY }} \
+                       --build-arg FRONTEND_GREEN_URL=${{ secrets.FRONTEND_GREEN_URL }} \
                        -t $IMAGE_NAME:latest -t $IMAGE_NAME:$IMAGE_TAG -t $IMAGE_NAME:${{ steps.get_rc_tag.outputs.rc_tag }} .
           docker push $IMAGE_NAME:latest
           docker push $IMAGE_NAME:$IMAGE_TAG
@@ -285,50 +287,49 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
       - run: aws eks update-kubeconfig --name ${{ secrets.EKS_QA_CLUSTER }} --region us-east-1
 
-      - name: Deploy to QA (blue/green (green overlay)
+      - name: Update Backend Images
         run: |
-          cd infra/k8s/overlays/qa
-          kustomize build . | kubectl apply -f -
-          # wait for readiness
-          kubectl rollout status deploy/finance-manager-frontend-qa --timeout=120s
-          kubectl rollout status deploy/finance-manager-backend-qa  --timeout=120s
-          kubectl rollout status deploy/analytics-service-qa     --timeout=120s
+          ECR=${{ secrets.ECR_REGISTRY }}
+          TAG=${{ steps.get_rc_tag.outputs.rc_tag }}
+          kubectl set image deployment/finance-backend \
+            backend=$ECR/sahil1709/finance-manager-backend:$TAG
+          kubectl set image deployment/analytics-service \
+            analytics=$ECR/sahil1709/finance-manager-analytics:$TAG
+          kubectl rollout status deploy/analytics-service --timeout=120s
+          kubectl rollout status deploy/finance-backend --timeout=120s
 
-  deploy-to-RC:
-    runs-on: ubuntu-latest
-    needs: [integration-test, build-and-push]
-    if: ${{ needs.integration-test.outputs.test-passed == 'success' }}
-    steps:
-      - name: Save EC2 Key Pair
+      - name: Promote New Version into Green
         run: |
-          cat << EOF > ~/ec2-key.pem
-          ${{ secrets.EC2_SSH_KEY }}
-          EOF
-          chmod 600 ~/ec2-key.pem
-        shell: bash
+          ECR=${{ secrets.ECR_REGISTRY }}
+          TAG=${{ steps.get_rc_tag.outputs.rc_tag }}
 
-      - name: Add Host key to Known Hosts for RC
-        run: |
-          mkdir -p ~/.ssh
-          touch ~/.ssh/known_hosts
-          ssh-keyscan -H ${{ secrets.RC_ELASTIC_IP }} >> ~/.ssh/known_hosts
-        shell: bash
+          # 1) Roll out the new app into Green
+          kubectl set image deployment/frontend-green \
+            frontend=$ECR/sahil1709/finance-manager-frontend:$TAG \
+            --record
 
-      - name: SSH into RC EC2 and Update Images
+          # 2) Wait for it to come up
+          kubectl rollout status deployment/frontend-green --timeout=120s
+
+      - name: Smoke-Test Green
         run: |
-          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/ec2-key.pem ec2-user@${{ secrets.RC_ELASTIC_IP }} <<EOF
-          cat <<CRED > ~/.aws/credentials
-          [default]
-          aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws_session_token=${{ secrets.AWS_SESSION_TOKEN }}
-          CRED
-          cd finance-manager-infra
-          git stash
-          git pull
-          source .env
-          cd scripts
-          chmod +x update_images_rc.sh
-          ./update_images_rc.sh
-          EOF
-        shell: bash
+          echo "Visit: https://green.sahilgupta.studio to verify v$TAG"
+
+      - name: Cutover Green → Blue
+        run: |
+          # point the main svc at Green
+          kubectl patch svc finance-frontend-svc --type merge -p '
+          {
+            "spec": {
+              "selector": {
+                "app": "finance-frontend",
+                "variant": "green"
+              }
+            }
+          }'
+
+      - name: Confirm Production
+        run: |
+          echo "Now https://sahilgupta.studio serves v$TAG (Green → New Blue)"
+
+

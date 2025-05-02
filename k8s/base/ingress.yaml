@@ -9,6 +9,7 @@ spec:
   tls:
   - hosts:
     - sahilgupta.studio
+    - green.sahilgupta.studio
     secretName: tls-secret
   rules:
   - host: sahilgupta.studio
@@ -35,3 +36,14 @@ spec:
             name: analytics-svc
             port:
               number: 8001
+
+  - host: green.sahilgupta.studio
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: finance-frontend-green-svc
+            port:
+              number: 80

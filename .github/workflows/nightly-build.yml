@@ -260,8 +260,96 @@ jobs:
           docker push $IMAGE_NAME:${{ steps.get_rc_tag.outputs.rc_tag }}
         shell: bash
 
-  deploy-to-QA:
+  # ───────────────
+  # 1) QA to UAT
+  # ───────────────
+  promote-to-uat:
     needs: build-and-push
+    runs-on: ubuntu-latest
+    outputs:
+      uat_tag: ${{ steps.retag.outputs.uat_tag }}
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+
+      - name: Log in to ECR
+        run: |
+          aws ecr get-login-password --region us-east-1 \
+            | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
+
+      - name: Pull RC Images
+        run: |
+          TAG=${{ needs.build-and-push.outputs.rc_tag }}
+          docker pull ${{ secrets.ECR_REGISTRY }}/sahil1709/finance-manager-frontend:$TAG
+          docker pull ${{ secrets.ECR_REGISTRY }}/sahil1709/finance-manager-backend:$TAG
+          docker pull ${{ secrets.ECR_REGISTRY }}/sahil1709/finance-manager-analytics:$TAG
+
+      - name: Run QA Smoke Tests
+        run: |
+          echo "Running smoke tests on RC images... for now placeholder"
+
+      - name: Retag RC → UAT
+        id: retag
+        run: |
+          TAG=${{ needs.build-and-push.outputs.rc_tag }}
+          UAT=uat-${TAG}
+          echo "uat_tag=$UAT" >> $GITHUB_OUTPUT
+          for svc in finance-manager-frontend finance-manager-backend finance-manager-analytics; do
+            docker tag ${{ secrets.ECR_REGISTRY }}/sahil1709/$svc:$TAG ${{ secrets.ECR_REGISTRY }}/sahil1709/$svc:$UAT
+            docker push ${{ secrets.ECR_REGISTRY }}/sahil1709/$svc:$UAT
+          done
+
+  # ───────────────
+  # 2) UAT to Prod
+  # ───────────────
+  promote-to-prod:
+    needs: promote-to-uat
+    runs-on: ubuntu-latest
+    outputs:
+      ga_tag: ${{ steps.retag.outputs.ga_tag }}
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+
+      - name: Log in to ECR
+        run: |
+          aws ecr get-login-password --region us-east-1 \
+            | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
+
+      - name: Pull UAT Images
+        run: |
+          TAG=${{ needs.promote-to-uat.outputs.uat_tag }}
+          docker pull ${{ secrets.ECR_REGISTRY }}/sahil1709/finance-manager-frontend:$TAG
+          docker pull ${{ secrets.ECR_REGISTRY }}/sahil1709/finance-manager-backend:$TAG
+          docker pull ${{ secrets.ECR_REGISTRY }}/sahil1709/finance-manager-analytics:$TAG
+
+      - name: Run UAT Integration Tests
+        run: |
+          echo "Running integration tests on UAT images... for now placeholder"
+
+      - name: Retag UAT → GA
+        id: retag
+        run: |
+          TAG=${{ needs.promote-to-uat.outputs.uat_tag }}
+          GA=ga-${TAG}
+          echo "ga_tag=$GA" >> $GITHUB_OUTPUT
+          for svc in finance-manager-frontend finance-manager-backend finance-manager-analytics; do
+            docker tag ${{ secrets.ECR_REGISTRY }}/sahil1709/$svc:$TAG ${{ secrets.ECR_REGISTRY }}/sahil1709/$svc:$GA
+            docker push ${{ secrets.ECR_REGISTRY }}/sahil1709/$svc:$GA
+          done
+
+  deploy-blue-green:
+    needs: promote-to-prod
     runs-on: ubuntu-latest
     steps:
       - name: Checkout infra
@@ -280,19 +368,20 @@ jobs:
 
       - name: Update Backend Images
         run: |
+          TAG=${{ needs.promote-to-prod.outputs.ga_tag }}
           kubectl set image deployment/finance-backend \
-            backend=${{ secrets.ECR_REGISTRY }}/sahil1709/finance-manager-backend:${{ needs.build-and-push.outputs.rc_tag }}
+            backend=${{ secrets.ECR_REGISTRY }}/sahil1709/finance-manager-backend:$TAG
           kubectl set image deployment/analytics-service \
-            analytics=${{ secrets.ECR_REGISTRY }}/sahil1709/finance-manager-analytics:${{ needs.build-and-push.outputs.rc_tag }}
+            analytics=${{ secrets.ECR_REGISTRY }}/sahil1709/finance-manager-analytics:$TAG
           kubectl rollout status deploy/analytics-service --timeout=120s
           kubectl rollout status deploy/finance-backend --timeout=120s
 
       - name: Promote New Version into Green
         run: |
-
+          TAG=${{ needs.promote-to-prod.outputs.ga_tag }}
           # 1) Roll out the new app into Green
           kubectl set image deployment/frontend-green \
-            frontend=${{ secrets.ECR_REGISTRY }}/sahil1709/finance-manager-frontend:${{ needs.build-and-push.outputs.rc_tag }}
+            frontend=${{ secrets.ECR_REGISTRY }}/sahil1709/finance-manager-frontend:$TAG
 
           # 2) Wait for it to come up
           kubectl rollout status deployment/frontend-green --timeout=120s

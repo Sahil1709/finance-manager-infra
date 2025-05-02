@@ -260,15 +260,6 @@ jobs:
           docker push $IMAGE_NAME:${{ steps.get_rc_tag.outputs.rc_tag }}
         shell: bash
 
-      - name: Trigger QA Deploy
-        uses: peter-evans/repository-dispatch@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          repository: Sahil1709/finance-manager-infra
-          event-type: qa_deploy
-          client-payload: |
-            {"tag":"${{ steps.push.outputs.IMAGE_TAG }}"}
-
   deploy-to-QA:
     needs: build-and-push
     runs-on: ubuntu-latest
@@ -289,24 +280,19 @@ jobs:
 
       - name: Update Backend Images
         run: |
-          ECR=${{ secrets.ECR_REGISTRY }}
-          TAG=${{ steps.get_rc_tag.outputs.rc_tag }}
           kubectl set image deployment/finance-backend \
-            backend=$ECR/sahil1709/finance-manager-backend:$TAG
+            backend=${{ secrets.ECR_REGISTRY }}/sahil1709/finance-manager-backend:${{ steps.get_rc_tag.outputs.rc_tag }}
           kubectl set image deployment/analytics-service \
-            analytics=$ECR/sahil1709/finance-manager-analytics:$TAG
+            analytics=${{ secrets.ECR_REGISTRY }}/sahil1709/finance-manager-analytics:${{ steps.get_rc_tag.outputs.rc_tag }}
           kubectl rollout status deploy/analytics-service --timeout=120s
           kubectl rollout status deploy/finance-backend --timeout=120s
 
       - name: Promote New Version into Green
         run: |
-          ECR=${{ secrets.ECR_REGISTRY }}
-          TAG=${{ steps.get_rc_tag.outputs.rc_tag }}
 
           # 1) Roll out the new app into Green
           kubectl set image deployment/frontend-green \
-            frontend=$ECR/sahil1709/finance-manager-frontend:$TAG \
-            --record
+            frontend=${{ secrets.ECR_REGISTRY }}/sahil1709/finance-manager-frontend:${{ steps.get_rc_tag.outputs.rc_tag }}
 
           # 2) Wait for it to come up
           kubectl rollout status deployment/frontend-green --timeout=120s

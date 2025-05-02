@@ -281,9 +281,9 @@ jobs:
       - name: Update Backend Images
         run: |
           kubectl set image deployment/finance-backend \
-            backend=${{ secrets.ECR_REGISTRY }}/sahil1709/finance-manager-backend:${{ steps.get_rc_tag.outputs.rc_tag }}
+            backend=${{ secrets.ECR_REGISTRY }}/sahil1709/finance-manager-backend:${{ needs.build-and-push.outputs.rc_tag }}
           kubectl set image deployment/analytics-service \
-            analytics=${{ secrets.ECR_REGISTRY }}/sahil1709/finance-manager-analytics:${{ steps.get_rc_tag.outputs.rc_tag }}
+            analytics=${{ secrets.ECR_REGISTRY }}/sahil1709/finance-manager-analytics:${{ needs.build-and-push.outputs.rc_tag }}
           kubectl rollout status deploy/analytics-service --timeout=120s
           kubectl rollout status deploy/finance-backend --timeout=120s
 
@@ -292,7 +292,7 @@ jobs:
 
           # 1) Roll out the new app into Green
           kubectl set image deployment/frontend-green \
-            frontend=${{ secrets.ECR_REGISTRY }}/sahil1709/finance-manager-frontend:${{ steps.get_rc_tag.outputs.rc_tag }}
+            frontend=${{ secrets.ECR_REGISTRY }}/sahil1709/finance-manager-frontend:${{ needs.build-and-push.outputs.rc_tag }}
 
           # 2) Wait for it to come up
           kubectl rollout status deployment/frontend-green --timeout=120s

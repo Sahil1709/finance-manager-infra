@@ -327,7 +327,7 @@ jobs:
         id: run-tests
         run: |
           HOST=${{ steps.setup-microservices.outputs.host }}
-          FRONTEND_RESULT=$(curl -s http://localhost:3000/)
+          FRONTEND_RESULT=$(curl -s http://$HOST/)
           BACKEND_RESULT=$(curl -s http://localhost:8000/health/)
           ANALYTICS_RESULT=$(curl -s http://localhost:8001/insights/1234/)
           if echo "$FRONTEND_RESULT" | grep "Finance Manager" \
@@ -356,8 +356,6 @@ jobs:
         if: ${{ always() }}
         run: |
           kubectl delete namespace qa
-          kubectl delete cluster-issuer letsencrypt-prod -n qa || true
-          kubectl delete ingress frontend-ingress -n qa || true
           kubectl delete deployment frontend-blue -n qa || true
           kubectl delete deployment frontend-green -n qa || true
           pkill -f "kubectl port-forward svc/finance-backend-svc"
@@ -426,7 +424,7 @@ jobs:
         id: run-tests
         run: |
           HOST=${{ steps.setup-microservices.outputs.host }}
-          FRONTEND_RESULT=$(curl -s http://localhost:3000/)
+          FRONTEND_RESULT=$(curl -s http://$HOST/)
           BACKEND_RESULT=$(curl -s http://localhost:8000/health/)
           ANALYTICS_RESULT=$(curl -s http://localhost:8001/insights/1234/)
           if echo "$FRONTEND_RESULT" | grep "Finance Manager" \
@@ -462,10 +460,10 @@ jobs:
         if: ${{ always() }}
         run: |
           kubectl delete namespace uat
-          kubectl delete cluster-issuer letsencrypt-prod -n uat || true
-          kubectl delete ingress frontend-ingress -n uat || true
           kubectl delete deployment frontend-blue -n uat || true
           kubectl delete deployment frontend-green -n uat || true
+          kubectl delete deployment finance-backend -n uat || true
+          kubectl delete deployment analytics-service -n uat || true
           pkill -f "kubectl port-forward svc/finance-backend-svc"
           pkill -f "kubectl port-forward svc/analytics-svc"
 

@@ -529,6 +529,7 @@ jobs:
         id: interactive-inputs
         uses: boasihq/interactive-inputs@v2
         with:
+          ngrok-authtoken: ${{ secrets.NGROK_AUTHTOKEN }}
           timeout: 160
           title: "Green version is successfully deployed. Would you like to proceed?"
           interactive: |

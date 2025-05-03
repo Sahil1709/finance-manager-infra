@@ -304,6 +304,14 @@ jobs:
           envsubst < deployments.yaml | kubectl apply -n qa -f deployments.yaml
           envsubst < frontend.yaml | kubectl apply -n qa -f frontend.yaml
 
+      - name: Wait for Deployments to be Ready
+        run: |
+          # Ensure pods are up before port-forwarding
+          kubectl rollout status deployment/finance-backend   -n qa --timeout=300s
+          kubectl rollout status deployment/analytics-service -n qa --timeout=300s
+          kubectl rollout status deployment/frontend-blue     -n qa --timeout=300s
+          kubectl rollout status deployment/frontend-green    -n qa --timeout=300s
+
       - name: Setup microservices for testing
         id: setup-microservices
         run: |
@@ -414,7 +422,7 @@ jobs:
           kubectl port-forward svc/analytics-svc 8001:8001 -n uat &
           sleep 5
 
-      - name: Run QA Tests
+      - name: Run UAT Tests
         id: run-tests
         run: |
           HOST=${{ steps.setup-microservices.outputs.host }}
@@ -424,12 +432,20 @@ jobs:
           if echo "$FRONTEND_RESULT" | grep "Finance Manager" \
             && echo "$BACKEND_RESULT" | grep healthy \
             && echo "$ANALYTICS_RESULT" | grep "No transactions" ; then
-            echo "SUCCESS: Smoke tests passed."
+            echo "SUCCESS: UAT tests passed."
             echo "::set-output name=result::success"
           else
             echo "FAILURE: Smoke tests did not pass."
             echo "::set-output name=result::failure"
           fi
+
+      - name: Wait for Deployments to be Ready
+        run: |
+          # Ensure pods are up before port-forwarding
+          kubectl rollout status deployment/finance-backend   -n uat --timeout=300s
+          kubectl rollout status deployment/analytics-service -n uat --timeout=300s
+          kubectl rollout status deployment/frontend-blue     -n uat --timeout=300s
+          kubectl rollout status deployment/frontend-green    -n uat --timeout=300s
 
       - name: Retag UAT → GA
         id: retag

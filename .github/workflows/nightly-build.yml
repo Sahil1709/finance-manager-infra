@@ -351,7 +351,7 @@ jobs:
         env:
           HOST: ${{ steps.setup-microservices.outputs.host }}
         run: |
-          chmod +x scripts/qa_tests.sh
+          chmod +x infra/scripts/qa_tests.sh
           infra/scripts/qa_tests.sh
 
       - name: Retag RC → UAT

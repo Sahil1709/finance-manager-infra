@@ -304,10 +304,6 @@ jobs:
           envsubst < deployments.yaml | kubectl apply -n qa -f deployments.yaml
           envsubst < frontend.yaml | kubectl apply -n qa -f frontend.yaml
 
-          kubectl wait --for=condition=ready pod -l app=finance-frontend -n qa --timeout=300s
-          kubectl wait --for=condition=ready pod -l app=finance-backend -n qa --timeout=300s
-          kubectl wait --for=condition=ready pod -l app=analytics-service -n qa --timeout=300s
-
       - name: Setup microservices for testing
         id: setup-microservices
         run: |

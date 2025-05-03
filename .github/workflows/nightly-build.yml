@@ -194,7 +194,27 @@ jobs:
           fi
         shell: bash
 
+      - name: Check if RC Tag Already in ECR
+        id: check_ecr
+        run: |
+          EXISTING=$(aws ecr list-images \
+                      --repository-name sahil1709/finance-manager-frontend \
+                      --region ${{ env.AWS_REGION }} \
+                      --query 'imageIds[].imageTag' \
+                      --output text)
+          echo "Existing in ECR: $EXISTING"
+
+          # Default: rebuild
+          SKIP=false
+          if echo "$EXISTING" | tr '\t' '\n' | grep -x "${{ steps.get_rc_tag.outputs.rc_tag }}"; then
+            echo "Tag already exists; skipping build & push."
+            SKIP=true
+          fi
+
+          echo "skip_build=$SKIP" >> $GITHUB_OUTPUT
+
       - name: Build & Push Frontend Image
+        if: ${{ steps.check_ecr.outputs.skip_build == 'false' }}
         id: build_frontend
         run: |
           cd src/frontend
@@ -221,6 +241,7 @@ jobs:
 
       - name: Build & Push Backend Image
         id: build_backend
+        if: ${{ steps.check_ecr.outputs.skip_build == 'false' }}
         run: |
           cd src/backend
           cat <<EOF > .env
@@ -244,6 +265,7 @@ jobs:
         shell: bash
 
       - name: Build & Push Analytics Image
+        if: ${{ steps.check_ecr.outputs.skip_build == 'false' }}
         run: |
           cd src/analytics_service
           IMAGE_NAME="${{ secrets.ECR_REGISTRY }}/sahil1709/finance-manager-analytics"

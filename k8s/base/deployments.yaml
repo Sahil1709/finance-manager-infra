@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: finance-manager-backend:PLACEHOLDER
+          image: ${ECR_REGISTRY}/sahil1709/finance-manager-backend:${TAG}
           ports:
             - containerPort: 8000
 ---
@@ -46,7 +46,7 @@ spec:
     spec:
       containers:
         - name: analytics
-          image: finance-manager-analytics:PLACEHOLDER
+          image: ${ECR_REGISTRY}/sahil1709/finance-manager-analytics:${TAG}
           ports:
             - containerPort: 8001
 ---

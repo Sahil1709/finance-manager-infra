@@ -359,8 +359,8 @@ jobs:
           BACKEND_RESULT=$(curl -s http://localhost:8000/health/)
           echo "Backend result: $BACKEND_RESULT"
 
-          echo "Testing Analytics at http://localhost:8001/analytics-api/insights/1234/"
-          ANALYTICS_RESULT=$(curl -s http://localhost:8001/analytics-api/insights/1234/)
+          echo "Testing Analytics at http://localhost:8001/analytics-api/insights/userid/?userid=1234"
+          ANALYTICS_RESULT=$(curl -s http://localhost:8001/analytics-api/insights/userid/?userid=1234)
           echo "Analytics result: $ANALYTICS_RESULT"
 
           # Validate outputs using shell patterns
@@ -464,8 +464,8 @@ jobs:
           BACKEND_RESULT=$(curl -s http://localhost:8000/health/)
           echo "Backend result: $BACKEND_RESULT"
 
-          echo "Testing Analytics at http://localhost:8001/analytics-api/insights/1234/"
-          ANALYTICS_RESULT=$(curl -s http://localhost:8001/analytics-api/insights/1234/)
+          echo "Testing Analytics at http://localhost:8001/analytics-api/insights/userid/?userid=1234"
+          ANALYTICS_RESULT=$(curl -s http://localhost:8001/analytics-api/insights/userid/?userid=1234)
           echo "Analytics result: $ANALYTICS_RESULT"
 
           # Validate outputs using shell patterns

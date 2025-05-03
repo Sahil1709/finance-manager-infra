@@ -16,21 +16,37 @@ module "vpc" {
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "20.36.0"
+
   cluster_name    = var.cluster_name
   cluster_version = "1.27"
-  subnets         = module.vpc.private_subnets
-  vpc_id          = module.vpc.vpc_id
+
+  # Instead of `subnets = ...`, use:
+  cluster_subnet_ids = module.vpc.private_subnets
+
+  # Provide the VPC ID too:
+  vpc_id = module.vpc.vpc_id
+
+  # Define EKS-managed node groups inline:
   eks_managed_node_groups = {
     default = {
       desired_capacity = 2
-      max_capacity     = 4
       min_capacity     = 2
+      max_capacity     = 4
       instance_types   = ["t3.medium"]
     }
   }
-  # turn off auto mode (IAM roles, etc)
-  depends_on = [module.vpc]
+
+  # If you want to disable the default aws-auth ConfigMap management, you can:
+  manage_aws_auth_configmap = false
+
+  # And if you ever need to disable node group management (rare):
+  # manage_eks_managed_node_groups = false
+
+  # No need to touch `create_iam_service_linked_role`—it’s removed in v20+
+  
+  depends_on = [ module.vpc ]
 }
+
 
 module "rds" {
   source  = "terraform-aws-modules/rds/aws"

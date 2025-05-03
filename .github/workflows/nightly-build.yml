@@ -326,22 +326,33 @@ jobs:
       - name: Run QA Tests
         id: run-tests
         run: |
+          set +e  # prevent immediate exit on test failures
           HOST=${{ steps.setup-microservices.outputs.host }}
+
+          echo "Testing Frontend at http://$HOST/"
           FRONTEND_RESULT=$(curl -s http://$HOST/)
+          echo "Frontend result: $FRONTEND_RESULT"
+
+          echo "Testing Backend at http://localhost:8000/health/"
           BACKEND_RESULT=$(curl -s http://localhost:8000/health/)
+          echo "Backend result: $BACKEND_RESULT"
+
+          echo "Testing Analytics at http://localhost:8001/insights/1234/"
           ANALYTICS_RESULT=$(curl -s http://localhost:8001/insights/1234/)
-          if echo "$FRONTEND_RESULT" | grep "Finance Manager" \
-            && echo "$BACKEND_RESULT" | grep healthy \
-            && echo "$ANALYTICS_RESULT" | grep "No transactions" ; then
+          echo "Analytics result: $ANALYTICS_RESULT"
+
+          # Validate outputs using shell patterns
+          if [[ "$FRONTEND_RESULT" == *"Finance Manager"* ]] && [[ "$BACKEND_RESULT" == *"healthy"* ]] && [[ "$ANALYTICS_RESULT" == *"No transactions"* ]]; then
             echo "SUCCESS: Smoke tests passed."
-            echo "::set-output name=result::success"
+            echo "result=success" >> $GITHUB_OUTPUT
           else
             echo "FAILURE: Smoke tests did not pass."
-            echo "::set-output name=result::failure"
+            echo "result=failure" >> $GITHUB_OUTPUT
+            exit 1
           fi
 
       - name: Retag RC → UAT
-        if: ${{ steps.run-tests.outputs.result == 'success' }}
+        if: steps.run-tests.outputs.result == 'success'
         id: retag
         run: |
           TAG=${{ needs.build-and-push.outputs.rc_tag }}
@@ -508,6 +519,21 @@ jobs:
       - name: Smoke-Test Green
         run: |
           echo "Visit: https://green.sahilgupta.studio to verify v$TAG"
+
+      - name: Interactive User input Step
+        id: interactive-inputs
+        uses: boasihq/interactive-inputs@v2
+        with:
+          timeout: 160
+          title: "Green version is successfully deployed. Would you like to proceed?"
+          interactive: |
+            fields:
+              - label: continue-roll-out
+                properties:
+                  display: Continue to roll out?
+                  defaultValue: 'false'
+                  type: boolean
+                  required: true
 
       - name: Cutover Green → Blue
         run: |

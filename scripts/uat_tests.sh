@@ -10,7 +10,7 @@ for i in $(seq 1 10); do
     FRONTEND_STATUS=$(curl -s -o /dev/null -w '%{http_code}' http://"$HOST"/)
     echo "Attempt $i: Frontend HTTP $FRONTEND_STATUS"
     [ "$FRONTEND_STATUS" -eq 200 ] && break
-    sleep 5
+    sleep 10
 done
 
 if [ "$FRONTEND_STATUS" -ne 200 ]; then

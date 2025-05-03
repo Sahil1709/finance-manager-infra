@@ -301,8 +301,8 @@ jobs:
           cd infra/k8s/base
           export ECR_REGISTRY=${{ secrets.ECR_REGISTRY }}
           export TAG=${{ needs.build-and-push.outputs.rc_tag }}
-          envsubst < deployments.yaml | kubectl apply -n qa -f deployments.yaml
-          envsubst < frontend.yaml | kubectl apply -n qa -f frontend.yaml
+          envsubst < deployments.yaml | kubectl apply -n qa -f -
+          envsubst < frontend.yaml | kubectl apply -n qa -f -
 
       - name: Wait for Deployments to be Ready
         run: |
@@ -402,8 +402,8 @@ jobs:
           cd infra/k8s/base
           export ECR_REGISTRY=${{ secrets.ECR_REGISTRY }}
           export TAG=${{ needs.build-and-push.outputs.rc_tag }}
-          envsubst < deployments.yaml | kubectl apply -n uat -f deployments.yaml
-          envsubst < frontend.yaml | kubectl apply -n uat -f frontend.yaml
+          envsubst < deployments.yaml | kubectl apply -n uat -f -
+          envsubst < frontend.yaml | kubectl apply -n uat -f -
 
           kubectl wait --for=condition=ready pod -l app=finance-frontend -n uat --timeout=300s
           kubectl wait --for=condition=ready pod -l app=finance-backend -n uat --timeout=300s

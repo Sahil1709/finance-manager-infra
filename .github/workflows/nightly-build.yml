@@ -489,6 +489,18 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
       - run: aws eks update-kubeconfig --name ${{ secrets.EKS_QA_CLUSTER }} --region us-east-1
 
+      - name: Initial deployment
+        run: |
+          cd infra/k8s/base
+          export ECR_REGISTRY=${{ secrets.ECR_REGISTRY }}
+          export TAG=${{ needs.promote-to-prod.outputs.ga_tag }}
+          envsubst < frontend.yaml | kubectl apply -f -
+          envsubst < deployments.yaml | kubectl apply -f -
+          kubectl apply -f ingress.yaml
+          kubectl apply -f cluster-issuer.yaml || true
+          kubectl rollout status deployment/frontend-blue --timeout=120s
+          kubectl rollout status deployment/frontend-green --timeout=120s
+
       - name: Update Backend Images
         run: |
           TAG=${{ needs.promote-to-prod.outputs.ga_tag }}

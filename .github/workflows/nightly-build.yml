@@ -489,18 +489,6 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
       - run: aws eks update-kubeconfig --name ${{ secrets.EKS_QA_CLUSTER }} --region us-east-1
 
-      - name: Initial deployment
-        run: |
-          cd infra/k8s/base
-          export ECR_REGISTRY=${{ secrets.ECR_REGISTRY }}
-          export TAG=${{ needs.promote-to-prod.outputs.ga_tag }}
-          envsubst < frontend.yaml | kubectl apply -f -
-          envsubst < deployments.yaml | kubectl apply -f -
-          kubectl apply -f ingress.yaml
-          kubectl apply -f cluster-issuer.yaml || true
-          kubectl rollout status deployment/frontend-blue --timeout=120s
-          kubectl rollout status deployment/frontend-green --timeout=120s
-
       - name: Update Backend Images
         run: |
           TAG=${{ needs.promote-to-prod.outputs.ga_tag }}
@@ -530,8 +518,8 @@ jobs:
         uses: boasihq/interactive-inputs@v2
         with:
           ngrok-authtoken: ${{ secrets.NGROK_AUTHTOKEN }}
-          timeout: 160
-          title: "Green version is successfully deployed. Would you like to proceed?"
+          timeout: 1200
+          title: "Green version is successfully deployed at https://green.sahilgupta.studio. Would you like to proceed?"
           interactive: |
             fields:
               - label: continue-roll-out
@@ -542,6 +530,7 @@ jobs:
                   required: true
 
       - name: Cutover Green → Blue
+        if: ${{ steps.interactive-inputs.outputs.continue-roll-out == 'true' }}
         run: |
           # point the main svc at Green
           kubectl patch svc finance-frontend-svc --type merge -p '

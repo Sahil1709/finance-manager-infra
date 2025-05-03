@@ -434,31 +434,12 @@ jobs:
 
       - name: Run UAT Tests
         id: run-tests
+        shell: bash
+        env:
+          HOST: ${{ steps.setup-microservices.outputs.host }}
         run: |
-          set +e  # prevent immediate exit on test failures
-          HOST=${{ steps.setup-microservices.outputs.host }}
-
-          echo "Testing Frontend at http://$HOST/"
-          FRONTEND_RESULT=$(curl -s http://$HOST/)
-          echo "Frontend result: $FRONTEND_RESULT"
-
-          echo "Testing Backend at http://localhost:8000/health/"
-          BACKEND_RESULT=$(curl -s http://localhost:8000/health/)
-          echo "Backend result: $BACKEND_RESULT"
-
-          echo "Testing Analytics at http://localhost:8001/analytics-api/insights/userid/?userid=1234"
-          ANALYTICS_RESULT=$(curl -s http://localhost:8001/analytics-api/insights/userid/?userid=1234)
-          echo "Analytics result: $ANALYTICS_RESULT"
-
-          # Validate outputs using shell patterns
-          if [[ "$FRONTEND_RESULT" == *"Finance Manager"* ]] && [[ "$BACKEND_RESULT" == *"healthy"* ]] && [[ "$ANALYTICS_RESULT" == *"No transactions"* ]]; then
-            echo "SUCCESS: UAT tests passed."
-            echo "result=success" >> $GITHUB_OUTPUT
-          else
-            echo "FAILURE: UAT tests did not pass."
-            echo "result=failure" >> $GITHUB_OUTPUT
-            exit 1
-          fi
+          chmod +x infra/scripts/uat_tests.sh
+          infra/scripts/uat_tests.sh
 
       - name: Wait for Deployments to be Ready
         run: |

@@ -413,13 +413,17 @@ jobs:
           kubectl create namespace uat || true
           cd infra/k8s/base
           export ECR_REGISTRY=${{ secrets.ECR_REGISTRY }}
-          export TAG=${{ needs.build-and-push.outputs.rc_tag }}
+          export TAG=${{ needs.promote-to-uat.outputs.uat_tag }}
           envsubst < deployments.yaml | kubectl apply -n uat -f -
           envsubst < frontend.yaml | kubectl apply -n uat -f -
 
-          kubectl wait --for=condition=ready pod -l app=finance-frontend -n uat --timeout=300s
-          kubectl wait --for=condition=ready pod -l app=finance-backend -n uat --timeout=300s
-          kubectl wait --for=condition=ready pod -l app=analytics-service -n uat --timeout=300s
+      - name: Wait for Deployments to be Ready
+        run: |
+          # Ensure pods are up before port-forwarding
+          kubectl rollout status deployment/finance-backend   -n uat --timeout=300s
+          kubectl rollout status deployment/analytics-service -n uat --timeout=300s
+          kubectl rollout status deployment/frontend-blue     -n uat --timeout=300s
+          kubectl rollout status deployment/frontend-green    -n uat --timeout=300s
 
       - name: Setup microservices for testing
         id: setup-microservices

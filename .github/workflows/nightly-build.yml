@@ -336,13 +336,40 @@ jobs:
 
       - name: Setup microservices for testing
         id: setup-microservices
+        shell: bash
         run: |
-          HOST=$(kubectl get svc finance-frontend-svc -n qa \
-            -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-          echo "::set-output name=host::$HOST"
+          # 1) Wait for the Service to have an ingress[0].hostname or .ip
+          for i in {1..12}; do
+            HB=$(kubectl get svc finance-frontend-svc -n qa \
+                -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null)
+            IP=$(kubectl get svc finance-frontend-svc -n qa \
+                -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null)
+
+            if [ -n "$HB" ]; then
+              HOST="$HB"
+              break
+            elif [ -n "$IP" ]; then
+              HOST="$IP"
+              break
+            fi
+
+            echo "Waiting for LoadBalancer address (attempt $i)..."
+            sleep 10
+          done
+
+          if [ -z "$HOST" ]; then
+            echo "❌ ERROR: LoadBalancer hostname/IP never appeared!"
+            exit 1
+          fi
+
+          echo "Frontend is at: $HOST"
+
+          # Export via Env File
+          echo "host=$HOST" >> "$GITHUB_OUTPUT"
+
+          # 2) Port-forward (background)
           kubectl port-forward svc/finance-backend-svc 8000:8000 -n qa &
-          sleep 5
-          kubectl port-forward svc/analytics-svc 8001:8001 -n qa &
+          kubectl port-forward svc/analytics-svc       8001:8001 -n qa &
           sleep 5
 
       - name: Run QA Tests
@@ -427,13 +454,40 @@ jobs:
 
       - name: Setup microservices for testing
         id: setup-microservices
+        shell: bash
         run: |
-          HOST=$(kubectl get svc finance-frontend-svc -n uat \
-            -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-          echo "::set-output name=host::$HOST"
+          # 1) Wait for the Service to have an ingress[0].hostname or .ip
+          for i in {1..12}; do
+            HB=$(kubectl get svc finance-frontend-svc -n uat \
+                -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null)
+            IP=$(kubectl get svc finance-frontend-svc -n uat \
+                -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null)
+
+            if [ -n "$HB" ]; then
+              HOST="$HB"
+              break
+            elif [ -n "$IP" ]; then
+              HOST="$IP"
+              break
+            fi
+
+            echo "Waiting for LoadBalancer address (attempt $i)..."
+            sleep 10
+          done
+
+          if [ -z "$HOST" ]; then
+            echo "❌ ERROR: LoadBalancer hostname/IP never appeared!"
+            exit 1
+          fi
+
+          echo "Frontend is at: $HOST"
+
+          # Export via Env File
+          echo "host=$HOST" >> "$GITHUB_OUTPUT"
+
+          # 2) Port-forward (background)
           kubectl port-forward svc/finance-backend-svc 8000:8000 -n uat &
-          sleep 5
-          kubectl port-forward svc/analytics-svc 8001:8001 -n uat &
+          kubectl port-forward svc/analytics-svc       8001:8001 -n uat &
           sleep 5
 
       - name: Run UAT Tests
